@@ -78,5 +78,4 @@ This project is intentionally scoped:
   deferred until after the core single-project system is complete.
 
 ## License
-
-_TBD._
+MIT
