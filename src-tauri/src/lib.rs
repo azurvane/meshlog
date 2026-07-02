@@ -1,4 +1,3 @@
-use core::num;
 use std::path::Path;
 use std::fs;
 use std::process::Command;
@@ -7,34 +6,39 @@ use rusqlite::Connection;
 mod config;
 
 use config::COUNTER_ID;
+use config::DB_PATH;
+use config::GIT_PATH;
+use config::IMAGE_PATH;
+use config::LOG_PATH;
 
 // setup the folder and create necessary folder and files for the app
 #[tauri::command]
 fn initialize_project(path: &str) -> Result<String, String> {
     
-    let git_path = format!("{}/.git", path);
+    let git_path = format!("{}/{}", path, GIT_PATH);
     if !Path::new(&git_path).exists() {
         run_git_init(path)?;
     }
     
-    let log_path = format!("{}/.logs", path);
+    let log_path = format!("{}/{}", path, LOG_PATH);
     if !Path::new(&log_path).exists() {
         fs::create_dir(&log_path).map_err(|e| e.to_string())?;
     }
     
-    let image_path = format!("{}/.images", path);
+    let image_path = format!("{}/{}", path, IMAGE_PATH);
     if !Path::new(&image_path).exists() {
         fs::create_dir(&image_path).map_err(|e| e.to_string())?;
     }
     
-    let db_path = format!("{}/.assets.sqlite", path);
-    let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    let db_path = format!("{}/{}", path, DB_PATH);
     if !Path::new(&db_path).exists() {
+        let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
         fs::File::create(&db_path).map_err(|e| e.to_string())?;
         initialise_assets_tables(&db).map_err(|e| e.to_string())?;
         initialise_counters_tables(&db).map_err(|e| e.to_string())?;
     }
     else {
+        let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
         verify_database_state(&db).map_err(|e| e.to_string())?;
     }
     
@@ -284,7 +288,7 @@ fn get_commit(file_path: &str) -> Result<Vec<String>, String> { // USELESS FUNCT
         .args(["log", "--oneline", "--graph", "--decorate"])
         .current_dir(file_path)
         .output() // Executes the command and captures stdout/stderr
-        .expect("Failed to execute git command");
+        .map_err(|e| e.to_string())?;
     
     if output.status.success() {
         let git_history = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
@@ -304,7 +308,7 @@ fn get_tag(file_path: &str) -> Result<Vec<String>, String> {
         .args(["tag", "--list"])
         .current_dir(file_path)
         .output()
-        .expect("Failed to execute git command");
+        .map_err(|e| e.to_string())?;
     
     if output.status.success() {
         let tags = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
@@ -360,6 +364,17 @@ fn generate_tag(asset_id: &str, file_path: &str) -> Result<String, String> {
 // // link the rename or relocated files to the git history
 // fn link_renamed_asset(conn: &Connection, old_path: &str, new_path: &str, asset_id: &str) -> Result<String, String> {
 // }
+
+// update md log files after the commit
+
+// create the log file if not exist
+
+// update db after first commit of a file
+
+// update db after nth commit of a file
+
+// update db for rename or relocated file
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
