@@ -2,6 +2,8 @@ use std::path::Path;
 use std::fs;
 use std::process::Command;
 use rusqlite::Connection;
+use serde::Serialize;
+use chrono::{DateTime, Local};
 
 mod config;
 
@@ -10,6 +12,32 @@ use config::DB_PATH;
 use config::GIT_PATH;
 use config::IMAGE_PATH;
 use config::LOG_PATH;
+
+// file node data structure 
+#[derive(serde::Serialize)]
+struct FileNode {
+    name: String,
+    is_dir: bool,
+    children: Option<Vec<FileNode>>,
+}
+
+// file meta node data structure
+#[derive(serde::Serialize)]
+struct FileMetadata {
+    size_bytes: u64,
+    modified_ddmmyyyy: String,
+    created_ddmmyyyy: String,
+    is_dir: bool,
+}
+// struct FileMetadata {
+//     size_bytes: u64,
+//     modified_ddmmyyyy: String,
+//     created_ddmmyyyy: String,
+//     is_dir: bool,
+//     file_type: String,
+//     current_version: String,
+//     current_hash: String
+// }
 
 // setup the folder and create necessary folder and files for the app
 #[tauri::command]
@@ -33,7 +61,6 @@ fn initialize_project(path: &str) -> Result<String, String> {
     let db_path = format!("{}/{}", path, DB_PATH);
     if !Path::new(&db_path).exists() {
         let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
-        fs::File::create(&db_path).map_err(|e| e.to_string())?;
         initialise_assets_tables(&db).map_err(|e| e.to_string())?;
         initialise_counters_tables(&db).map_err(|e| e.to_string())?;
     }
@@ -64,14 +91,15 @@ fn initialise_assets_tables(conn: &Connection) -> Result<(), String> { // HELPER
 
 // initialise the counter table for the assets.sqlite
 fn initialise_counters_tables(conn: &Connection) -> Result<(), String> { // HELPER FUCNTION
-    // counter table (single row)
-    conn.execute(
+    let create_table_query = format!(
         "CREATE TABLE IF NOT EXISTS counters (
-            id INTEGER PRIMARY KEY CHECK (id = ?1),
+            id INTEGER PRIMARY KEY CHECK (id = {}),
             next_asset_id INTEGER NOT NULL
         );",
-        [COUNTER_ID], // Empty parameters because this query is static
-    ).map_err(|e| e.to_string())?;
+        COUNTER_ID
+    );
+    // counter table (single row)
+    conn.execute(&create_table_query, []).map_err(|e| e.to_string())?;
 
     // initialise the table 
     conn.execute(
@@ -156,7 +184,7 @@ fn run_git_init(path: &str) -> Result<String, String> { // HELPER FUCNTION
     }
 }
 
-// return all the files in path and subfolders exluding all the hidden files
+// return all files in path and subfolders exluding all the hidden files in flat view
 #[tauri::command]
 fn list_asset_files(path: &str) -> Result<Vec<String>, String> { 
     let mut names = Vec::new();
@@ -181,6 +209,41 @@ fn list_asset_files(path: &str) -> Result<Vec<String>, String> {
     }
     
     Ok(names)
+}
+
+// return tree view of all files in path and subfolders exluding all the hidden files
+#[tauri::command]
+fn get_file_tree(path: &str) -> Result<Vec<FileNode>, String> { 
+    let mut nodes: Vec<FileNode> = Vec::new();
+    let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let name = entry.file_name().into_string().map_err(|_| "bad filename".to_string())?;
+        
+        if name.starts_with(".") {
+            continue;
+        }
+        
+        let entry_path = entry.path();
+        let is_dir = entry_path.is_dir();
+        let mut children = None;
+        
+        if is_dir == true {
+            let path_str = entry_path.to_str().ok_or("invalid path encoding".to_string())?;
+            children = Some(get_file_tree(path_str)?);
+        }
+        
+        let value = FileNode {
+            name,
+            is_dir,
+            children
+        };
+        
+        nodes.push(value);
+    }
+    
+    Ok(nodes)
 }
 
 // add and commit the files
@@ -346,7 +409,7 @@ fn generate_tag(asset_id: &str, file_path: &str) -> Result<String, String> {
             number += 1;
             
             let prefix = &lastest_tag[..len - 4];
-            let new_tag = format!("{}{:4}", prefix, number);
+            let new_tag = format!("{}{:04}", prefix, number);
             
             Ok(new_tag)
         } else {
@@ -375,19 +438,56 @@ fn generate_tag(asset_id: &str, file_path: &str) -> Result<String, String> {
 
 // update db for rename or relocated file
 
+// get the meta data about the file to be displayed
+#[tauri::command]
+fn get_file_metadata(path: &str) -> Result<FileMetadata, String> {
+    let metadata_raw = fs::metadata(path).map_err(|e| e.to_string())?;
+    
+    // get the size
+    let size_bytes = metadata_raw.len();
+    
+    // get the time file was modifies
+    // run this in background also so when the user make some changes it will get autoupdate
+    let modified_system_time = metadata_raw.modified().map_err(|e| e.to_string())?;
+    let modified_chrono: DateTime<Local> = modified_system_time.into();
+    let modified_ddmmyyyy = modified_chrono.format("%d-%m-%Y").to_string();
+    
+    // get the time file was created
+    let created_system_time = metadata_raw.created().map_err(|e| e.to_string())?;
+    let created_chrono: DateTime<Local> = created_system_time.into();
+    let created_ddmmyyyy = created_chrono.format("%d-%m-%Y").to_string();
+    
+    // is it directory?
+    let is_dir: bool = metadata_raw.is_dir();
+    
+    let file_metadata = FileMetadata{
+        size_bytes,
+        modified_ddmmyyyy,
+        created_ddmmyyyy,
+        is_dir,
+    };
+    
+    Ok(file_metadata)
+}
+
+// background function which will listen to the os for file name or location change
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             initialize_project,
             list_asset_files,
+            get_file_tree,
             stage_commit_tag,
             mint_asset_id,
             get_tag,
             get_tag_assetid,
-            generate_tag
+            generate_tag,
+            get_file_metadata
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

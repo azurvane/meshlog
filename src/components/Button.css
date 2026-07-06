@@ -1,0 +1,18 @@
+.custom-button {
+  background-color: var(--color-accentCyan); /* The vibrant cyan from your screenshot */
+  color: var(--color-textDark); /* Dark text for contrast */
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  width: 100%;
+  text-align: center;
+}
+
+/* Handles the bright cyan highlight state on hover */
+.custom-button:hover {
+  background-color: var(--color-accentCyanHover);
+}
