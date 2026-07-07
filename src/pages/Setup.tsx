@@ -12,7 +12,7 @@ export function Setup({ onPathSelected }: SetupProps) {
     try {
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
-        await invoke("initialize_project", { path: selected });
+        await invoke("initialize_project", { rootPath: selected });
         onPathSelected(selected);
       }
     } catch (e) {

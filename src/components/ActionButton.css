@@ -1,0 +1,44 @@
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-textMuted); /* Dim/gray when inactive */
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+/* Hover state for unselected buttons */
+.action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: var(--color-textMuted);
+  color: var(--color-textBright);
+}
+
+/* The Glowing Active Selection State */
+.action-btn.active {
+  background-color: rgba(0, 163, 194, 0.05); /* Transparent subtle tint */
+  border: 1px solid var(--color-accentCyan); /* Vibrant cyan outline border */
+  color: var(--color-accentCyan); /* Text shifts to matching cyan glow */
+  box-shadow: 0 0 4px rgba(0, 163, 194, 0.15); /* Soft outer element glow */
+}
+
+/* Active button hover enhancement state */
+.action-btn.active:hover {
+  background-color: rgba(0, 163, 194, 0.1);
+  border-color: var(--color-accentCyanHover);
+  color: var(--color-accentCyanHover);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}

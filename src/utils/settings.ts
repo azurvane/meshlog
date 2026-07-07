@@ -6,9 +6,6 @@ const store = new LazyStore("settings.json");
 // Define your hardcoded default values here
 const DEFAULTS: Record<string, any> = {
   projectPath: "",
-  theme: "dark",
-  autoSave: true,
-  maxBackupFiles: 5,
 };
 
 export const AppSettings = {

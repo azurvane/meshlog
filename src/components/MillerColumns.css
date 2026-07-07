@@ -1,0 +1,188 @@
+.miller-columns-container {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background-color: var(--color-bgMain);
+}
+
+/* Clear utility handling absolute scrollbar hiding across engine architectures */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Base structural panel columns layout definitions */
+.miller-column {
+  width: 290px;
+  min-width: 280px;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bgCard);
+}
+
+.column-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: rgba(0, 0, 0, 0.12);
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.column-title {
+  color: var(--color-textBright);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.column-subtitle {
+  color: var(--color-textMuted);
+  font-size: 11px;
+}
+
+.column-count {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-textMuted);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+/* Master row layout tracking the version data column format */
+.column-row-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.7fr 1fr 1fr 1fr 1fr 1fr;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--color-textMuted);
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.01);
+}
+
+.column-row-grid:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--color-textBright);
+}
+
+.column-row-grid.selected {
+  background-color: rgba(0, 163, 196, 0.12);
+  color: var(--color-accentCyan);
+}
+
+/* Sub-grid segment configurations mapping visual components correctly */
+.grid-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #d08770; /* Matte Orange dot status indicator */
+  flex-shrink: 0;
+}
+
+.asset-tag-text {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dynamic styling matching your preview mockup files attributes text metrics */
+.grid-meta-time {
+  text-align: left;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.grid-meta-size {
+  text-align: right;
+  font-size: 12px;
+  padding-right: 8px;
+  opacity: 0.6;
+}
+
+.grid-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.grid-meta-author {
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-row-arrow {
+  color: var(--color-textMuted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.column-row-grid.selected .asset-tag-text,
+.column-row-grid.selected .grid-meta-time,
+.column-row-grid.selected .grid-meta-author {
+  color: var(--color-accentCyan);
+}
+
+/* Metadata preview sidebar adjustments overrides */
+.metadata-preview {
+  width: 300px;
+  background-color: var(--color-bgMain);
+}
+
+.meta-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+}
+
+.meta-label {
+  color: var(--color-textMuted);
+}
+
+.meta-val {
+  color: var(--color-textBright);
+  font-weight: 500;
+}
