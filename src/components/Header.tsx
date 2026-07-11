@@ -1,15 +1,30 @@
-import React, { useState } from "react";
+import React from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  SlidersHorizontal,
+  PanelLeftOpen,
+  Terminal,
+  Settings,
+  Search,
+} from "lucide-react";
 import { ActionButton } from "./ActionButton";
+import { FileMetadata } from "../utils/viewFields";
+import { ViewMenu } from "./ViewMenu";
 import "./Header.css";
 
 interface HeaderProps {
   onResetWorkspace?: () => void;
+  visibleFields: Set<keyof FileMetadata>;
+  onToggleField: (key: keyof FileMetadata) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onResetWorkspace }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onResetWorkspace,
+  visibleFields,
+  onToggleField,
+}) => {
   // Track each panel's visibility independently
   const [panels, setPanels] = useState({
-    view: true, // Active by default
     terminal: false,
     inspector: false,
     settings: false,
@@ -22,6 +37,24 @@ export const Header: React.FC<HeaderProps> = ({ onResetWorkspace }) => {
     }));
   };
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const menuWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuWrapperRef.current &&
+        !menuWrapperRef.current.contains(e.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="app-header">
       <div className="header-left">
@@ -33,7 +66,9 @@ export const Header: React.FC<HeaderProps> = ({ onResetWorkspace }) => {
 
       <div className="header-center">
         <div className="search-container">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon">
+            <Search size={18} />{" "}
+          </span>
           <input
             type="text"
             placeholder="Find asset, version, or hash..."
@@ -44,26 +79,31 @@ export const Header: React.FC<HeaderProps> = ({ onResetWorkspace }) => {
       </div>
 
       <div className="header-right">
-        <ActionButton
-          label="View"
-          icon={<span>📊</span>}
-          isActive={panels.view}
-          onClick={() => togglePanel("view")}
-        />
+        <div ref={menuWrapperRef} className="view-menu-anchor">
+          <ActionButton
+            label="View"
+            icon={<SlidersHorizontal size={18} />}
+            isActive={isMenuOpen}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+          />
+          {isMenuOpen && (
+            <ViewMenu visibleFields={visibleFields} onToggle={onToggleField} />
+          )}
+        </div>
         <ActionButton
           label="Terminal"
-          icon={<span>&gt;_</span>}
+          icon={<Terminal size={18} />}
           isActive={panels.terminal}
           onClick={() => togglePanel("terminal")}
         />
         <ActionButton
-          label="Inspector"
-          icon={<span>ℹ️</span>}
+          label="Stamp"
+          icon={<PanelLeftOpen size={18} />}
           isActive={panels.inspector}
           onClick={() => togglePanel("inspector")}
         />
         <ActionButton
-          icon={<span>⚙️</span>}
+          icon={<Settings size={18} />}
           isActive={panels.settings}
           onClick={() => {
             togglePanel("settings");

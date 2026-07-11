@@ -32,7 +32,7 @@ use config::NEXT_ASSET_ID;
 const NO_TAG_ERROR: &str = "No tag";
 
 // file node data structure 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 struct FileNode {
     name: String,
     is_dir: bool,
@@ -40,7 +40,7 @@ struct FileNode {
 }
 
 // file meta node data structure
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 struct FileMetadata {
     name: String,
     size_bytes: u64,
@@ -403,7 +403,7 @@ fn get_tag(root_path: &str) -> Result<Vec<String>, String> {
 // get tag for a specific asset id
 #[tauri::command]
 fn get_tag_assetid(asset_id: &str, root_path: &str) -> Result<Vec<String>, String> {
-    let pattern = format!("{}*", asset_id);
+    let pattern = format!("{}-v*", asset_id);
     
     let output = Command::new("git")
         .args(["tag", "--list", &pattern, "--sort=-creatordate"])
@@ -443,7 +443,7 @@ fn get_latest_tag_assetid(asset_id: &str, root_path: &str) -> Result<String, Str
 }
 
 // get the hash for the commit for a specific tag
-fn get_hash_assitid(tag: &str, root_path: &str) -> Result<String, String> {
+fn get_hash_assetid(tag: &str, root_path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["rev-list", "-n", "1", tag])
         .current_dir(root_path)
@@ -464,12 +464,12 @@ fn get_hash_assitid(tag: &str, root_path: &str) -> Result<String, String> {
 
 // get all the hash for a specific asset id
 #[tauri::command]
-fn get_all_hash_assitid(asset_id: &str, root_path: &str) -> Result<Vec<String>, String> {
+fn get_all_hash_assetid(asset_id: &str, root_path: &str) -> Result<Vec<String>, String> {
     let tags = get_tag_assetid(asset_id, root_path)?;
     let mut hashes = Vec::new();
     
     for tag in &tags {
-        let hash = get_hash_assitid(tag, root_path)?;
+        let hash = get_hash_assetid(tag, root_path)?;
         hashes.push(hash);
     };
     
@@ -478,9 +478,9 @@ fn get_all_hash_assitid(asset_id: &str, root_path: &str) -> Result<Vec<String>, 
 
 // get the latest hash for a specific asset id
 #[tauri::command]
-fn get_latest_hash_assitid(asset_id: &str, root_path: &str) -> Result<String, String> {
+fn get_latest_hash_assetid(asset_id: &str, root_path: &str) -> Result<String, String> {
     let tag = get_latest_tag_assetid(asset_id, root_path)?;
-    let hash = get_hash_assitid(&tag, root_path)?;
+    let hash = get_hash_assetid(&tag, root_path)?;
     Ok(hash)
 }
 
@@ -594,11 +594,9 @@ fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<FileMe
     let version = get_latest_tag_assetid(&asset_id, root_path)?;
 
     // get the latest hash
-    let hash = get_latest_hash_assitid(&asset_id, root_path)?;
+    let hash = get_hash_assetid(&version, root_path)?;
     
     // get latest tag for the file
-    // first get the asset id from the path
-    // then get the latest tag from function "get_latest_tag_assetid"
     let file_metadata = FileMetadata{
         name: file_name,
         size_bytes: size,
@@ -630,8 +628,8 @@ pub fn run() {
             get_tag,
             get_tag_assetid,
             get_latest_tag_assetid,
-            get_all_hash_assitid,
-            get_latest_hash_assitid,
+            get_all_hash_assetid,
+            get_latest_hash_assetid,
             generate_tag,
             get_assetid_path,
             get_file_metadata

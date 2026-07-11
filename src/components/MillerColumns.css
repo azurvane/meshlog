@@ -4,6 +4,20 @@
   overflow-x: auto;
   overflow-y: hidden;
   background-color: var(--color-bgMain);
+  scrollbar-width: auto;
+  scrollbar-color: transparent transparent;
+}
+.miller-columns-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+  background-color: transparent;
+}
+.miller-columns-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+.miller-columns-container::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border: none;
 }
 
 /* Clear utility handling absolute scrollbar hiding across engine architectures */
@@ -17,12 +31,13 @@
 
 /* Base structural panel columns layout definitions */
 .miller-column {
-  width: 290px;
   min-width: 280px;
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   background-color: var(--color-bgCard);
+  position: relative;
+  flex-shrink: 0;
 }
 
 .column-header {
@@ -68,18 +83,18 @@
   padding: 4px 0;
 }
 
-/* Master row layout tracking the version data column format */
 .column-row-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 0.7fr 1fr 1fr 1fr 1fr 1fr;
   align-items: center;
-  padding: 10px 14px;
+  padding: 10px 20px 10px 10px;
   cursor: pointer;
   user-select: none;
   font-size: 13px;
   color: var(--color-textMuted);
   transition: all 0.15s ease;
   border-bottom: 1px solid rgba(255, 255, 255, 0.01);
+  position: relative;
+  min-width: max-content;
 }
 
 .column-row-grid:hover {
@@ -146,9 +161,34 @@
 }
 
 .grid-row-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--color-textMuted);
   font-size: 14px;
   flex-shrink: 0;
+}
+
+.column-fields-sub-header {
+  display: grid;
+  align-items: center;
+  padding: 6px 20px 6px 10px;
+  background-color: rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--color-border);
+  min-width: max-content;
+}
+
+.sub-header-field-label {
+  color: var(--color-textMuted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px;
 }
 
 .column-row-grid.selected .asset-tag-text,
@@ -185,4 +225,61 @@
 .meta-val {
   color: var(--color-textBright);
   font-weight: 500;
+}
+
+.grid-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  padding-right: 6px;
+}
+
+.column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.column-resize-handle:hover,
+.column-resize-handle.resizing {
+  background-color: var(--color-accentCyan);
+}
+
+.column-scrollable-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: transparent transparent;
+}
+
+.column-scrollable-container::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+  background-color: transparent;
+}
+
+.column-scrollable-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.column-scrollable-container::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border: none;
+}
+
+.column-scroll-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: max-content;
 }
