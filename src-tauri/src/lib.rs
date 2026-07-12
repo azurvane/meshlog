@@ -455,7 +455,7 @@ fn get_latest_tag_assetid(asset_id: &str, root_path: &str) -> Result<String, Str
 // get the hash for the commit for a specific tag
 fn get_hash_assetid(tag: &str, root_path: &str) -> Result<String, String> {
     let output = Command::new("git")
-        .args(["rev-list", "-n", "1", tag])
+        .args(["rev-parse", "--short", tag])
         .current_dir(root_path)
         .output()
         .map_err(|e| e.to_string())?;
@@ -562,8 +562,7 @@ fn populate_db(root_path: &str) -> Result<(), String> {
         let mut values_clauses = Vec::new();
         let mut params: Vec<String> = Vec::new();
         
-        for (i, (asset_id, _version, file_path, name, created_at)) in chunk.iter().enumerate() {
-            let log_path = get_log_path(file_path, root_path)?;
+        for (i, (asset_id,  name, relative_file_path, log_path, created_at)) in chunk.iter().enumerate() {
             let base_idx = i * 5;
             
             values_clauses.push(format!(
@@ -573,8 +572,8 @@ fn populate_db(root_path: &str) -> Result<(), String> {
             
             params.push(asset_id.clone());
             params.push(name.clone());
-            params.push(file_path.clone());
-            params.push(log_path);
+            params.push(relative_file_path.clone());
+            params.push(log_path.clone());
             params.push(created_at.clone());
         }
         
@@ -623,11 +622,12 @@ fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, String,
     }
     
     let mut asset_ids_missing = Vec::new();
-    for file in commited_files {
-        let (asset_id, version) = get_assetid_version(&file, root_path)?;
+    for relative_file_path in commited_files {
+        let (asset_id, _) = get_assetid_version(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
-            let (name, created_at) = get_filename_createdat(&file, root_path)?;
-            asset_ids_missing.push((asset_id, version, file, name, created_at));
+            let (name, created_at) = get_filename_createdat(&relative_file_path, root_path)?;
+            let log_path = get_log_path(&relative_file_path, root_path)?;
+            asset_ids_missing.push((asset_id, name, relative_file_path, log_path, created_at));
         }
     }
     
@@ -670,8 +670,18 @@ fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -> Re
     
     if output.status.success() {
         let git_history = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
-        let latest_commit_hash = git_history.lines().next().map(String::from).ok_or(NO_TAG_ERROR.to_string())?;
-        Ok(latest_commit_hash)
+        let line = git_history.lines().next().ok_or(NO_TAG_ERROR.to_string())?;
+        if let Some(tag_start) = line.find("tag: ") {
+            let tag_part = &line[tag_start + 5..];
+            let tag_end = tag_part
+                .find(|c| c == ')' || c == ',')
+                .unwrap_or(tag_part.len());
+                
+            let tag_name = tag_part[..tag_end].trim().to_string();
+            Ok(tag_name)
+        } else {
+            Err(NO_TAG_ERROR.to_string())
+        }
     } else {    
         let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
         Err(error_text)
@@ -687,8 +697,8 @@ fn get_assetid_version(relative_file_path: &str, root_path: &str) -> Result<(Str
         return Err(format!("Tag format is invalid: {}", tag));
     }
     
-    let asset_id = parts[0].to_string();
-    let version = parts[1].to_string();
+    let version = parts[0].to_string();
+    let asset_id = parts[1].to_string();
     
     Ok((asset_id, version))
 }
@@ -713,6 +723,7 @@ fn get_filename_createdat(relative_file_path: &str, root_path: &str) -> Result<(
     Ok((file_name, created_str))
 }
 
+// get the log path for a specific file
 fn get_log_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
     let file_name = get_filename_createdat(relative_file_path, root_path)?.0;
     let log_path = Path::new(root_path)

@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { FileMetadata, DEFAULT_VISIBLE } from "../utils/viewFields";
 import { Header } from "../components/Header";
@@ -62,6 +62,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         setError(null);
 
         await invoke("initialize_project", { rootPath: filePath });
+        await invoke("populate_db", { rootPath: filePath });
 
         const tree: FileNode[] = await invoke("get_file_tree", {
           absoluteFolderPath: filePath,
@@ -104,15 +105,15 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       if (!node.is_dir) {
+        const absolutePath = `${basePath}/${node.name}`;
         try {
-          const absolutePath = `${basePath}/${node.name}`;
           const meta = await invoke<FileMetadata>("get_file_metadata", {
             absoluteFilePath: absolutePath,
-            rootPath: filePath,
+            rootPath: basePath,
           });
           results.set(absolutePath, meta);
-        } catch {
-          // Skip missing metadata records safely
+        } catch (err) {
+          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
         }
       }
     }
