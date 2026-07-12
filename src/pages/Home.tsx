@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { FileMetadata, DEFAULT_VISIBLE } from "../utils/viewFields";
 import { Header } from "../components/Header";
 import { MillerColumns } from "../components/MillerColumns";
+import { TerminalView } from "../components/terminal";
 import "../theme/colors.ts";
 import "./Home.css";
 
@@ -22,6 +23,9 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [activePathIndices, setActivePathIndices] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [hostname, setHostname] = useState<string | null>(null);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [metadataMap, setMetadataMap] = useState<Map<string, FileMetadata>>(
     new Map()
   );
@@ -38,6 +42,19 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   };
 
   useEffect(() => {
+    async function fetchUserInfo() {
+      try {
+        const [user, host] = await invoke<[string, string]>("get_user_info");
+        setUserName(user);
+        setHostname(host);
+      } catch (err: any) {
+        console.error("Failed to fetch user info:", err);
+      }
+    }
+    fetchUserInfo();
+  }, []);
+
+  useEffect(() => {
     async function loadProject() {
       if (!filePath) return;
       try {
@@ -52,7 +69,6 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         setTreeData(tree);
         setActivePathIndices([]);
 
-        // Fix: Query directly with root path string to bypass async stale state
         await fetchMetadataForNodes(tree, filePath);
       } catch (err: any) {
         setError(err.toString());
@@ -82,7 +98,6 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     return segments.join("/");
   };
 
-  // Fixed: Decoupled entirely from treeData state; processes directly via explicit strings
   const fetchMetadataForNodes = async (nodes: FileNode[], basePath: string) => {
     const results = new Map<string, FileMetadata>();
 
@@ -113,12 +128,18 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     }
   };
 
+  const handleToggleTerminal = () => {
+    setIsTerminalOpen((prev) => !prev);
+  };
+
   return (
     <div className="home-layout">
       <Header
         onResetWorkspace={onResetPath}
         visibleFields={activeFields}
         onToggleField={toggleActiveFields}
+        isTerminalOpen={isTerminalOpen}
+        onToggleTerminal={handleToggleTerminal}
       />
       <main className="content-viewport">
         {loading && (
@@ -137,6 +158,14 @@ export function Home({ filePath, onResetPath }: HomeProps) {
           />
         )}
       </main>
+
+      {isTerminalOpen && userName && hostname && (
+        <TerminalView
+          userName={userName}
+          hostName={hostname}
+          folderName={filePath.split("/").pop()}
+        />
+      )}
     </div>
   );
 }

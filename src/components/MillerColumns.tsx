@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
+import { useState } from "react";
 import { FIELD_REGISTRY, FileMetadata } from "../utils/viewFields";
 import "./MillerColumns.css";
 
@@ -122,7 +123,9 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
       {columns.map((column, colIdx) => {
         const selectedNodeIdx = activePathIndices[colIdx];
 
-        const getGridColumnStyle = (field: typeof FIELD_REGISTRY[number]): string => {
+        const getGridColumnStyle = (
+          field: (typeof FIELD_REGISTRY)[number]
+        ): string => {
           const minW = field.minWidth || "80px";
           const flexW = field.flexWeight || "1fr";
           return `minmax(${minW}, ${flexW})`;
@@ -196,7 +199,9 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
                             {getFieldValue(field.key, node, metadata)}
                           </span>
                         ))}
-                        {node.is_dir && <span className="grid-row-arrow">›</span>}
+                        {node.is_dir && (
+                          <span className="grid-row-arrow">›</span>
+                        )}
                       </div>
                     );
                   })}

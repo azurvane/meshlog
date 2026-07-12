@@ -1,8 +1,10 @@
 use std::path::Path;
 use std::fs;
 use std::process::Command;
+use std::vec;
 use rusqlite::Connection;
 use serde::Serialize;
+use std::collections::HashSet;
 use chrono::{DateTime, Local};
 
 mod config;
@@ -52,6 +54,14 @@ struct FileMetadata {
     current_hash: String
 }
 
+// return OS username and hostname to be displayed on the terminal 
+#[tauri::command]
+fn get_user_info() -> Result<(String, String), String> {
+    let username = whoami::username().map_err(|e| e.to_string())?;
+    let hostname = whoami::hostname().map_err(|e| e.to_string())?;
+    Ok((username, hostname))
+}
+
 // setup the folder and create necessary folder and files for the app
 #[tauri::command]
 fn initialize_project(root_path: &str) -> Result<String, String> {
@@ -86,15 +96,14 @@ fn initialize_project(root_path: &str) -> Result<String, String> {
 }
 
 // initialise the asset table for the assets.sqlite
-// keep the path relative so if root folder name or location changed the db is still valid
 fn initialise_assets_tables(conn: &Connection) -> Result<(), String> {
     let query = format!(
         "CREATE TABLE IF NOT EXISTS {} (
             {}      TEXT PRIMARY KEY,
-            {}  TEXT NOT NULL,
-            {}  TEXT NOT NULL,
             {}      TEXT NOT NULL,
-            {}    TEXT DEFAULT (strftime('%H:%M:%S', 'now', 'localtime') || '-' || strftime('%d-%m-%Y', 'now', 'localtime'))
+            {}      TEXT NOT NULL,
+            {}      TEXT NOT NULL,
+            {}      TEXT DEFAULT (strftime('%H:%M:%S', 'now', 'localtime') || '-' || strftime('%d-%m-%Y', 'now', 'localtime'))
         );",
         ASSETS_TABLE,
         ASSET_ID,
@@ -322,7 +331,7 @@ fn mint_asset_id(root_path: &str, filename: &str) -> Result<String, String> {
     let next_id = increment_and_get(&mut conn)?;
     let clean_name = sanitize_name(filename);
     
-    Ok(format!("{}-{}", clean_name, next_id))
+    Ok(format!("{}_{}", clean_name, next_id))
 }
 
 // get the counter value and Atomically reads/increments/writes the next_asset_id counter
@@ -363,6 +372,7 @@ fn sanitize_name(filename: &str) -> String { // HELPER FUCNTION
 }
 
 // get all the commits
+#[tauri::command]
 fn get_commit(root_path: &str) -> Result<Vec<String>, String> { // USELESS FUNCTION FOR NOW AT LEAST
     let output = Command::new("git")
         .args(["log", "--oneline", "--graph", "--decorate"])
@@ -532,16 +542,201 @@ fn generate_tag(asset_id: &str, root_path: &str) -> Result<String, String> {
 
 // update db for rename or relocated file
 
+// populate db with all or missing files in the assets folder
+#[tauri::command]
+fn populate_db(root_path: &str) -> Result<(), String> {
+    let missing_assets = get_missing_db_assets(root_path)?;
+    if missing_assets.is_empty() {
+        return Ok(());
+    }
+    
+    let db_path = std::path::Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    
+    let mut conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    
+    for chunk in missing_assets.chunks(100) {
+        let mut values_clauses = Vec::new();
+        let mut params: Vec<String> = Vec::new();
+        
+        for (i, (asset_id, _version, file_path, name, created_at)) in chunk.iter().enumerate() {
+            let log_path = get_log_path(file_path, root_path)?;
+            let base_idx = i * 5;
+            
+            values_clauses.push(format!(
+                "(?{}, ?{}, ?{}, ?{}, ?{})", 
+                base_idx + 1, base_idx + 2, base_idx + 3, base_idx + 4, base_idx + 5
+            ));
+            
+            params.push(asset_id.clone());
+            params.push(name.clone());
+            params.push(file_path.clone());
+            params.push(log_path);
+            params.push(created_at.clone());
+        }
+        
+        let query = format!(
+            "INSERT INTO {} ({}, {}, {}, {}, {}) VALUES {};",
+            ASSETS_TABLE,
+            ASSET_ID,
+            CURRENT_NAME,
+            CURRENT_PATH,
+            LOG_PATH_SQL,
+            CREATED_AT,
+            values_clauses.join(", ")
+        );
+        
+        let sql_params: Vec<&dyn rusqlite::ToSql> = params
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
+        
+        tx.execute(&query, sql_params.as_slice()).map_err(|e| e.to_string())?;
+    }
+    
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// Identifies committed Git assets that have not yet been registered in the database.
+fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, String, String, String,)>, String> {
+    let db_path = Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
+    let query = format!("SELECT {} FROM {};", ASSET_ID, ASSETS_TABLE);
+    
+    let commited_files = get_commited_files(root_path)?;
+    
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+    let id_iter = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?;
+    
+    let mut asset_ids_db = HashSet::new();
+    for id in id_iter {
+        asset_ids_db.insert(id.map_err(|e| e.to_string())?);
+    }
+    
+    let mut asset_ids_missing = Vec::new();
+    for file in commited_files {
+        let (asset_id, version) = get_assetid_version(&file, root_path)?;
+        if !asset_ids_db.contains(&asset_id) {
+            let (name, created_at) = get_filename_createdat(&file, root_path)?;
+            asset_ids_missing.push((asset_id, version, file, name, created_at));
+        }
+    }
+    
+    Ok(asset_ids_missing)
+}
+
+// get all the commit files (remove the hidden file)
+fn get_commited_files(root_path: &str) -> Result<Vec<String>, String> {
+    let output = Command::new("git")
+        .args(["ls-files"])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        let files = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+        let file_vec: Vec<String> = files
+        .lines()
+        .filter(|line| {
+            !Path::new(line)
+                .components()
+                .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+        })
+        .map(String::from)
+        .collect();        
+    Ok(file_vec)
+    } else {    
+        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+        Err(error_text)
+    }
+}
+
+// get latest tag for a perticular file by relative path
+fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["log", "-n", "1", "--oneline", "--decorate", "--", relative_file_path])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        let git_history = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+        let latest_commit_hash = git_history.lines().next().map(String::from).ok_or(NO_TAG_ERROR.to_string())?;
+        Ok(latest_commit_hash)
+    } else {    
+        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+        Err(error_text)
+    }
+}
+
+// get the asset id and version 
+fn get_assetid_version(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
+    let tag = get_latest_tag_relative_path(relative_file_path, root_path)?;
+    let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
+    
+    if parts.len() != 2 {
+        return Err(format!("Tag format is invalid: {}", tag));
+    }
+    
+    let asset_id = parts[0].to_string();
+    let version = parts[1].to_string();
+    
+    Ok((asset_id, version))
+}
+
+// get the file name and created_at 
+fn get_filename_createdat(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
+    let root = Path::new(root_path);
+    let relative = Path::new(relative_file_path);
+    let absolute_path_buf = root.join(relative);
+    let absolute_path: &Path = absolute_path_buf.as_path();
+    let metadata_raw = fs::metadata(absolute_path).map_err(|e| e.to_string())?;
+    
+    let file_name = absolute_path
+        .file_name()
+        .map(|os_str| os_str.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "".to_string());
+    
+    let created_system_time = metadata_raw.created().map_err(|e| e.to_string())?;
+    let created_chrono: DateTime<Local> = created_system_time.into();
+    let created_str = created_chrono.format("%d-%m-%Y").to_string();
+    
+    Ok((file_name, created_str))
+}
+
+fn get_log_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+    let file_name = get_filename_createdat(relative_file_path, root_path)?.0;
+    let log_path = Path::new(root_path)
+        .join(LOG_PATH)
+        .join(format!("{}.md", file_name))
+        .to_string_lossy()
+        .into_owned();
+    
+    Ok(log_path)
+}
+
 // get the asset id through path of the file
 #[tauri::command]
-fn get_assetid_path(relative_path: &str, root_path: &str) -> Result<String, String> {
-    let db_path = format!("{}/{}", root_path, DB_PATH);
-    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+fn get_assetid_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+    let db_path = Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
 
     let query = format!("SELECT asset_id FROM {} WHERE current_path = ?1", ASSETS_TABLE);
     conn.query_row(
         &query, 
-        [relative_path],
+        [relative_file_path],
         |row| row.get(0),
     ).map_err(|e| e.to_string())
 }
@@ -551,8 +746,8 @@ fn get_assetid_path(relative_path: &str, root_path: &str) -> Result<String, Stri
 fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<FileMetadata, String> {
     let full_path = Path::new(absolute_file_path);
     let assets_root = Path::new(root_path);
-    let relative_path = full_path.strip_prefix(assets_root).map_err(|e| e.to_string())?;
-    let relative_path_str: &str = relative_path.to_str().ok_or("Path contains invalid UTF-8")?;
+    let relative_file_path = full_path.strip_prefix(assets_root).map_err(|e| e.to_string())?;
+    let relative_file_path_str: &str = relative_file_path.to_str().ok_or("Path contains invalid UTF-8")?;
     let metadata_raw = fs::metadata(absolute_file_path).map_err(|e| e.to_string())?;
     
     // get the name of the file
@@ -588,7 +783,7 @@ fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<FileMe
     };
     
     // get asset id 
-    let asset_id = get_assetid_path(relative_path_str, root_path)?;
+    let asset_id = get_assetid_path(relative_file_path_str, root_path)?;
     
     // get the latest version
     let version = get_latest_tag_assetid(&asset_id, root_path)?;
@@ -620,17 +815,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
+            get_user_info,
             initialize_project,
             list_asset_files,
             get_file_tree,
             stage_commit_tag,
             mint_asset_id,
+            get_commit,
             get_tag,
             get_tag_assetid,
             get_latest_tag_assetid,
             get_all_hash_assetid,
             get_latest_hash_assetid,
             generate_tag,
+            populate_db,
             get_assetid_path,
             get_file_metadata
         ])

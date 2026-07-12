@@ -6,6 +6,7 @@ import {
   Terminal,
   Settings,
   Search,
+  Command,
 } from "lucide-react";
 import { ActionButton } from "./ActionButton";
 import { FileMetadata } from "../utils/viewFields";
@@ -16,12 +17,16 @@ interface HeaderProps {
   onResetWorkspace?: () => void;
   visibleFields: Set<keyof FileMetadata>;
   onToggleField: (key: keyof FileMetadata) => void;
+  isTerminalOpen: boolean;
+  onToggleTerminal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onResetWorkspace,
   visibleFields,
   onToggleField,
+  isTerminalOpen,
+  onToggleTerminal,
 }) => {
   // Track each panel's visibility independently
   const [panels, setPanels] = useState({
@@ -67,14 +72,17 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-center">
         <div className="search-container">
           <span className="search-icon">
-            <Search size={18} />{" "}
+            <Search size={18} />
           </span>
           <input
             type="text"
             placeholder="Find asset, version, or hash..."
             className="search-input"
           />
-          <kbd className="search-shortcut">⌘K</kbd>
+          <kbd className="search-shortcut">
+            <Command size={12} />
+            <span>k</span>
+          </kbd>
         </div>
       </div>
 
@@ -93,8 +101,8 @@ export const Header: React.FC<HeaderProps> = ({
         <ActionButton
           label="Terminal"
           icon={<Terminal size={18} />}
-          isActive={panels.terminal}
-          onClick={() => togglePanel("terminal")}
+          isActive={isTerminalOpen}
+          onClick={onToggleTerminal}
         />
         <ActionButton
           label="Stamp"
