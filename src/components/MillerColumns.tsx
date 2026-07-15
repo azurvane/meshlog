@@ -13,11 +13,16 @@ interface MillerColumnsProps {
   filePath: string;
   treeData: FileNode[];
   activePathIndices: number[];
-  onSelectNode: (indices: number[], node: FileNode) => void;
+  onSelectNode: (indices: number[]) => void;
   visibleFields: Set<keyof FileMetadata>;
-  metadataMap: Map<string, FileMetadata>;
+  metadataMap: Map<string, Map<string, FileMetadata>>;
 }
 
+/**
+ * Miller Columns layout component. Displays hierarchical folder paths as adjacent scrollable panes.
+ * Renders sub-directories dynamically as users select folder items, supporting layout custom sizing,
+ * adjustable column dividers, and metadata grid fields display per item node.
+ */
 export const MillerColumns: React.FC<MillerColumnsProps> = ({
   filePath,
   treeData,
@@ -26,6 +31,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
   visibleFields,
   metadataMap,
 }) => {
+  // Converts raw byte integers into display-friendly values. Rounds down size parameters
+  // and appends appropriate unit labels (e.g., 'B', 'KB', 'MB') for readable layout rendering.
   const formatBytes = (bytes: number | undefined | null): string => {
     if (bytes === undefined || bytes === null) return "—";
     if (bytes < 1024) return `${bytes} B`;
@@ -80,6 +87,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
     (field) => field.key === "name" || visibleFields.has(field.key)
   );
 
+  // Installs active drag tracking event handlers on mouse down. Tracks horizontal mouse moves
+  // across the window object to adjust column width in state, capping sizes to a 200px minimum.
   const startResize = (colIdx: number, startX: number) => {
     setActiveResizeCol(colIdx);
     const startWidth = getColumnWidth(colIdx);
@@ -102,6 +111,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
     window.addEventListener("mouseup", onUp);
   };
 
+  // Resolves the string value to display for a specific cell item row field.
+  // Handles formatting constraints and displays directories with a null dash marker placeholder.
   const getFieldValue = (
     key: keyof FileMetadata,
     node: FileNode,
@@ -123,6 +134,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
       {columns.map((column, colIdx) => {
         const selectedNodeIdx = activePathIndices[colIdx];
 
+        // Formats CSS Grid template tracks. Translates registered field sizes (minimum pixel width, flex weights)
+        // into standard css grid track templates (e.g., minmax(80px, 1fr)) to structure the column sub-headers.
         const getGridColumnStyle = (
           field: (typeof FIELD_REGISTRY)[number]
         ): string => {
@@ -178,8 +191,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
                 <div className="column-body hide-scrollbar">
                   {column.nodes.map((node, nodeIdx) => {
                     const isSelected = selectedNodeIdx === nodeIdx;
-                    const itemPath = `${column.basePath}/${node.name}`;
-                    const metadata = metadataMap.get(itemPath) || null;
+                    const metadata =
+                      metadataMap.get(column.basePath)?.get(node.name) || null;
 
                     return (
                       <div
@@ -191,7 +204,7 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
                         onClick={() => {
                           const newIndices = activePathIndices.slice(0, colIdx);
                           newIndices.push(nodeIdx);
-                          onSelectNode(newIndices, node);
+                          onSelectNode(newIndices);
                         }}
                       >
                         {visibleFieldList.map((field) => (

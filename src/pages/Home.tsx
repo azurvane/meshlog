@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { FileMetadata, DEFAULT_VISIBLE } from "../utils/viewFields";
 import { Header } from "../components/Header";
 import { MillerColumns } from "../components/MillerColumns";
-import { TerminalView } from "../components/terminal";
+import { TerminalView } from "../components/Terminal";
 import "../theme/colors.ts";
 import "./Home.css";
 
@@ -13,11 +13,21 @@ interface FileNode {
   children?: FileNode[] | null;
 }
 
+interface VisibleFolder {
+  path: string;
+  nodes: FileNode[];
+}
+
 interface HomeProps {
   filePath: string;
   onResetPath: () => void;
 }
 
+/**
+ * Main workspace dashboard component. It coordinates directory browser navigation,
+ * handles communication with the backend Rust API to initialize projects and retrieve
+ * file listings, manages custom file metadata fields, and displays the command line terminal drawer.
+ */
 export function Home({ filePath, onResetPath }: HomeProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [activePathIndices, setActivePathIndices] = useState<number[]>([]);
@@ -26,12 +36,15 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [userName, setUserName] = useState<string | null>(null);
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
-  const [metadataMap, setMetadataMap] = useState<Map<string, FileMetadata>>(
-    new Map()
-  );
+  const [metadataMap, setMetadataMap] = useState<
+    Map<string, Map<string, FileMetadata>>
+  >(new Map());
   const [activeFields, setActiveFields] =
     useState<Set<keyof FileMetadata>>(DEFAULT_VISIBLE);
+  const previousFoldersRef = useRef<string[]>([filePath]);
 
+  // Toggles the visibility state of columns in the grid view. Adds or removes selected
+  // metadata fields (such as asset ID, hash, description, size) to control which data points are shown.
   const toggleActiveFields = (field: keyof FileMetadata) => {
     setActiveFields((prev) => {
       const next = new Set(prev);
@@ -41,6 +54,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     });
   };
 
+  // Query backend Rust shell services to retrieve local OS username and hostname information.
+  // This metadata is used to build a realistic prompt label (e.g. user@host ~ %) inside the terminal.
   useEffect(() => {
     async function fetchUserInfo() {
       try {
@@ -54,6 +69,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     fetchUserInfo();
   }, []);
 
+  // Trigger project workspace setup on path changes. Instructs the backend database manager
+  // to sync files, fetch directory listings, and initially cache metadata parameters for all root files.
   useEffect(() => {
     async function loadProject() {
       if (!filePath) return;
@@ -80,27 +97,67 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     loadProject();
   }, [filePath]);
 
-  const getFullPathFromIndices = (
-    indices: number[],
-    currentTree: FileNode[]
-  ): string => {
-    let segments: string[] = [filePath];
-    let currentNodes = currentTree;
+  function diff(oldList: string[], newList: string[]) {
+    const oldSet = new Set(oldList);
+    const newSet = new Set(newList);
 
-    for (const index of indices) {
-      const targetNode = currentNodes[index];
-      if (targetNode) {
-        segments.push(String(targetNode.name));
-        if (targetNode.children) {
-          currentNodes = targetNode.children;
-        }
+    const added = newList.filter((item) => !oldSet.has(item));
+    const removed = oldList.filter((item) => !newSet.has(item));
+
+    return { added, removed };
+  }
+
+  // evicting an entire folder — O(1), regardless of how many files were inside it
+  function evictFolder(
+    store: Map<string, Map<string, FileMetadata>>,
+    folder: string
+  ): Map<string, Map<string, FileMetadata>> {
+    const next = new Map(store);
+    next.delete(folder);
+    return next;
+  }
+
+  useEffect(() => {
+    async function useVisibleFolderSync(
+      indices: number[],
+      treeData: FileNode[]
+    ) {
+      const visibleFolders = getVisibleFolderPaths(indices, treeData);
+      const currentPaths = visibleFolders.map((folder) => folder.path);
+      const { added, removed } = diff(previousFoldersRef.current, currentPaths);
+
+      if (removed.length > 0) {
+        setMetadataMap((prev) => {
+          let nextMap = prev;
+          removed.forEach((folderPath) => {
+            nextMap = evictFolder(nextMap, folderPath);
+          });
+          return nextMap;
+        });
       }
-    }
-    return segments.join("/");
-  };
 
+      const folderLookup = new Map<string, FileNode[]>(
+        visibleFolders.map((folder) => [folder.path, folder.nodes])
+      );
+
+      if (added.length > 0) {
+        await Promise.all(
+          added.map((folderPath) => {
+            const nodes = folderLookup.get(folderPath) || [];
+            return fetchMetadataForNodes(nodes, folderPath);
+          })
+        );
+      }
+
+      previousFoldersRef.current = currentPaths;
+    }
+    useVisibleFolderSync(activePathIndices, treeData);
+  }, [activePathIndices, treeData]);
+
+  // Iterates through list nodes, making asynchronous requests to the database backend for file parameters.
+  // Merges new metadata values into the local React state map to update visible table values.
   const fetchMetadataForNodes = async (nodes: FileNode[], basePath: string) => {
-    const results = new Map<string, FileMetadata>();
+    const results = new Map<string, Map<string, FileMetadata>>();
 
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
@@ -109,28 +166,64 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         try {
           const meta = await invoke<FileMetadata>("get_file_metadata", {
             absoluteFilePath: absolutePath,
-            rootPath: basePath,
+            rootPath: filePath,
           });
-          results.set(absolutePath, meta);
+          if (!results.has(basePath)) {
+            results.set(basePath, new Map());
+          }
+          results.get(basePath)!.set(node.name, meta);
         } catch (err) {
           console.error(`Metadata fetch failed for ${absolutePath}:`, err);
         }
       }
     }
-
-    setMetadataMap((prev) => new Map([...prev, ...results]));
+    setMetadataMap((prevMap) => {
+      const nextOuterMap = new Map(prevMap);
+      for (const [currentPath, incomingFileMetadata] of results) {
+        const existingInnerMap = prevMap.get(currentPath);
+        const nextInnerMap = existingInnerMap
+          ? new Map(existingInnerMap)
+          : new Map();
+        for (const [fileName, metadata] of incomingFileMetadata) {
+          nextInnerMap.set(fileName, metadata);
+        }
+        nextOuterMap.set(currentPath, nextInnerMap);
+      }
+      return nextOuterMap;
+    });
   };
 
-  const handleSelectNode = async (indices: number[], node: FileNode) => {
+  // Callback triggered when a user clicks a row in the Miller columns directory layout.
+  // Updates selected indexes, crawls nested paths, fetches folder children metadata,
+  // and purges out-of-scope files from the metadata cache to optimize memory footprint.
+  const handleSelectNode = async (indices: number[]) => {
     setActivePathIndices(indices);
-    if (node.is_dir && node.children) {
-      const folderPath = getFullPathFromIndices(indices, treeData);
-      await fetchMetadataForNodes(node.children, folderPath);
-    }
   };
 
   const handleToggleTerminal = () => {
     setIsTerminalOpen((prev) => !prev);
+  };
+
+  const getVisibleFolderPaths = (
+    indices: number[],
+    treeData: FileNode[]
+  ): VisibleFolder[] => {
+    const result: VisibleFolder[] = [];
+    let currentNodes = treeData;
+    let currentPath = filePath;
+    for (const index of indices) {
+      const targetNode = currentNodes[index];
+      if (targetNode && targetNode.is_dir) {
+        currentPath = `${currentPath}/${targetNode.name}`;
+        if (targetNode.children) {
+          currentNodes = targetNode.children;
+          result.push({ path: currentPath, nodes: currentNodes });
+        } else {
+          result.push({ path: currentPath, nodes: [] });
+        }
+      }
+    }
+    return result;
   };
 
   return (

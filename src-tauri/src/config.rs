@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 // paths
 pub const GIT_PATH: &str = ".git";
 pub const LOG_PATH: &str = ".logs";
@@ -19,3 +21,27 @@ pub const CREATED_AT: &str = "created_at";
 // columns for COUNTER_TABLE
 pub const ID: &str = "id";
 pub const NEXT_ASSET_ID: &str = "next_asset_id";
+
+// git tag error message
+pub const NO_TAG_ERROR: &str = "No tag";
+
+// file node data structure 
+#[derive(Serialize)]
+pub struct FileNode {
+    pub name: String,
+    pub is_dir: bool,
+    pub children: Option<Vec<FileNode>>,
+}
+
+// file meta node data structure
+#[derive(Serialize)]
+pub struct FileMetadata {
+    pub name: String,
+    pub size_bytes: u64,
+    pub modified_ddmmyyyy: String,
+    pub created_ddmmyyyy: String,
+    pub is_dir: bool,
+    pub file_type: String,
+    pub current_version: String,
+    pub current_hash: String
+}

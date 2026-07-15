@@ -8,10 +8,17 @@ interface ViewMenuProps {
   onToggle: (key: keyof FileMetadata) => void;
 }
 
+/**
+ * Column selector menu dropdown component. Filter-maps the global field registry
+ * configuration list to present custom toggleable metadata key row options.
+ * Clicking a row raises callbacks to toggle visibility settings in the directory columns.
+ */
 export const ViewMenu: React.FC<ViewMenuProps> = ({
   visibleFields,
   onToggle,
 }) => {
+  // Scans the active configuration set to count how many column types are visible, 
+  // excluding locked identifiers (such as the default asset file name, which is always shown).
   const visibleToggleableCount = [...visibleFields].filter((key) => {
     const registryField = FIELD_REGISTRY.find((f) => f.key === key);
     return registryField && !registryField.locked;

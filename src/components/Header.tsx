@@ -21,6 +21,11 @@ interface HeaderProps {
   onToggleTerminal: () => void;
 }
 
+/**
+ * Top application header bar component. It renders the project navigation context (branding logotype,
+ * directory hierarchy badges), an interactive global asset/hash lookup input bar, and buttons 
+ * to toggle sub-windows (metadata column visibility dropdown, embedded shell terminal, inspector layout, or workspace resetting dialogs).
+ */
 export const Header: React.FC<HeaderProps> = ({
   onResetWorkspace,
   visibleFields,
@@ -28,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   isTerminalOpen,
   onToggleTerminal,
 }) => {
-  // Track each panel's visibility independently
+  // Track open/close state transitions for dashboard panels (such as the asset metadata details inspector drawer).
   const [panels, setPanels] = useState({
     terminal: false,
     inspector: false,
@@ -46,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const menuWrapperRef = useRef<HTMLDivElement>(null);
 
+  // Listens to global pointer down actions to check if the user clicks away from the open View menu options.
+  // If a click falls outside the menu boundary, it updates the toggle state to collapse the menu from view.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (

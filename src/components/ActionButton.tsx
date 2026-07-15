@@ -8,6 +8,11 @@ interface ActionButtonProps {
   onClick?: () => void;
 }
 
+/**
+ * A reusable toolbar button component designed for control bars and menus.
+ * It renders an optional vector icon alongside an optional text label, and
+ * evaluates the 'isActive' boolean to apply custom active-state highlighting styles.
+ */
 export const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   icon,
