@@ -1,7 +1,7 @@
 use std::process::Command;
 use std::path::Path;
 
-// add and commit the files
+// add, commit and tag the files
 #[tauri::command]
 pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, summary: &str, tag: &str)  -> Result<String, String> { 
     let sub_path = Path::new(root_path).join(relative_file_path);

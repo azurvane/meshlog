@@ -41,7 +41,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   >(new Map());
   const [activeFields, setActiveFields] =
     useState<Set<keyof FileMetadata>>(DEFAULT_VISIBLE);
-  const previousFoldersRef = useRef<string[]>([filePath]);
+  const previousFoldersRef = useRef<string[]>([]);
 
   // Toggles the visibility state of columns in the grid view. Adds or removes selected
   // metadata fields (such as asset ID, hash, description, size) to control which data points are shown.
@@ -80,6 +80,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
 
         await invoke("initialize_project", { rootPath: filePath });
         await invoke("populate_db", { rootPath: filePath });
+        await invoke("populate_log_md", { rootPath: filePath });
 
         const tree: FileNode[] = await invoke("get_file_tree", {
           absoluteFolderPath: filePath,

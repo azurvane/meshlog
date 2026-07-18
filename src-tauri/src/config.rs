@@ -24,6 +24,7 @@ pub const NEXT_ASSET_ID: &str = "next_asset_id";
 
 // git tag error message
 pub const NO_TAG_ERROR: &str = "No tag";
+pub const NO_COMMIT_METADATA: &str = "No commit metadata found";
 
 // file node data structure 
 #[derive(Serialize)]
@@ -33,7 +34,7 @@ pub struct FileNode {
     pub children: Option<Vec<FileNode>>,
 }
 
-// file meta node data structure
+// file metadata node data structure
 #[derive(Serialize)]
 pub struct FileMetadata {
     pub name: String,
@@ -44,4 +45,15 @@ pub struct FileMetadata {
     pub file_type: String,
     pub current_version: String,
     pub current_hash: String
+}
+
+// commit metadata node data structure
+#[derive(Serialize)]
+pub struct CommitMetadata {
+    pub commit_hash: String,
+    pub abbreviated_hash: String,
+    pub author_name: String,
+    pub author_date: String,
+    pub subject: String,
+    pub body: String,
 }

@@ -63,7 +63,7 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
     let query = format!("SELECT {} FROM {};", ASSET_ID, ASSETS_TABLE);
     
-    let commited_files = crate::git::get_commited_files(root_path)?;
+    let commit_files_paths = crate::git::get_commited_files(root_path)?;
     
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let id_iter = stmt
@@ -76,7 +76,7 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     }
     
     let mut asset_ids_missing = Vec::new();
-    for relative_file_path in commited_files {
+    for relative_file_path in commit_files_paths {
         let (asset_id, _) = crate::git::get_assetid_version(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
             let (name, created_at) = crate::file_system::get_filename_createdat(&relative_file_path, root_path)?;

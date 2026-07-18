@@ -1,5 +1,6 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs;
+use std::fs::File;
 use chrono::{DateTime, Local};
 
 use crate::config::LOG_PATH;
@@ -34,4 +35,11 @@ pub fn get_log_path(relative_file_path: &str, root_path: &str) -> Result<String,
         .into_owned();
     
     Ok(log_path)
+}
+
+// create a md log file
+pub fn create_log_md(file_path: &PathBuf) -> Result<(), String> { 
+    File::create(&file_path).map_err(|e| e.to_string())?;
+    
+    Ok(())
 }

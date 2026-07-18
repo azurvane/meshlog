@@ -15,7 +15,7 @@ use git::{
 };
 mod file_system;
 use file_system::{
-    list_asset_files, 
+    get_file_flat, 
     get_file_tree, 
     get_file_metadata,
 };
@@ -25,24 +25,13 @@ use database::{
     populate_db,
     get_assetid_path
 };
+mod log_manager;
+use log_manager::{
+    populate_log_md,
+    populate_log_md_assetid,
+};
 
 mod config;
-
-// fetch the version history of the file by asset id
-
-// link the rename or relocated files to the git history
-
-// update md log files after the commit
-
-// create the log file if not exist
-
-// update db after first commit of a file
-
-// update db after nth commit of a file
-
-// update db for rename or relocated file
-
-// background function which will listen to the os for file name or location change
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -53,7 +42,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_user_info,
             initialize_project,
-            list_asset_files,
+            get_file_flat,
             get_file_tree,
             stage_commit_tag,
             mint_asset_id,
@@ -66,7 +55,9 @@ pub fn run() {
             generate_tag,
             populate_db,
             get_assetid_path,
-            get_file_metadata
+            get_file_metadata,
+            populate_log_md,
+            populate_log_md_assetid
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

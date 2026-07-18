@@ -17,3 +17,4 @@ pub use tag::get_latest_tag_assetid;
 pub use tag::generate_tag;
 
 pub use pub_helper::get_assetid_version;
+pub use pub_helper::get_commit_metadata;

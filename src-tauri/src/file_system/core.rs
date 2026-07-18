@@ -7,7 +7,7 @@ use crate::config::FileNode;
 
 // return flat view of all files in path and subfolders exluding all the hidden files 
 #[tauri::command]
-pub fn list_asset_files(absolute_folder_path: &str) -> Result<Vec<String>, String> { 
+pub fn get_file_flat(absolute_folder_path: &str) -> Result<Vec<String>, String> { 
     let mut names = Vec::new();
     let entries = fs::read_dir(absolute_folder_path).map_err(|e| e.to_string())?;
     
@@ -21,7 +21,7 @@ pub fn list_asset_files(absolute_folder_path: &str) -> Result<Vec<String>, Strin
         let entry_path = entry.path();
         if entry_path.is_dir() {
             let path_str = entry_path.to_str().ok_or("invalid path encoding".to_string())?;
-            let mut sub_files = list_asset_files(path_str)?;
+            let mut sub_files = get_file_flat(path_str)?;
             names.append(&mut sub_files);
         }
         else {

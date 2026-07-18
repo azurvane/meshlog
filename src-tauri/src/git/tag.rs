@@ -63,6 +63,34 @@ pub fn get_latest_tag_assetid(asset_id: &str, root_path: &str) -> Result<String,
     }
 }
 
+// get latest tag for a perticular file by relative path
+pub fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["log", "-n", "1", "--oneline", "--decorate", "--", relative_file_path])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        let git_history = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+        let line = git_history.lines().next().ok_or(NO_TAG_ERROR.to_string())?;
+        if let Some(tag_start) = line.find("tag: ") {
+            let tag_part = &line[tag_start + 5..];
+            let tag_end = tag_part
+                .find(|c| c == ')' || c == ',')
+                .unwrap_or(tag_part.len());
+                
+            let tag_name = tag_part[..tag_end].trim().to_string();
+            Ok(tag_name)
+        } else {
+            Err(NO_TAG_ERROR.to_string())
+        }
+    } else {    
+        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+        Err(error_text)
+    }
+}
+
 // generate new tag
 #[tauri::command]
 pub fn generate_tag(asset_id: &str, root_path: &str) -> Result<String, String> {
@@ -94,33 +122,5 @@ pub fn generate_tag(asset_id: &str, root_path: &str) -> Result<String, String> {
         Err(git_err) => {
             Err(format!("Git command failed: {}", git_err))
         }
-    }
-}
-
-// get latest tag for a perticular file by relative path
-pub fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
-    let output = Command::new("git")
-        .args(["log", "-n", "1", "--oneline", "--decorate", "--", relative_file_path])
-        .current_dir(root_path)
-        .output()
-        .map_err(|e| e.to_string())?;
-    
-    if output.status.success() {
-        let git_history = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
-        let line = git_history.lines().next().ok_or(NO_TAG_ERROR.to_string())?;
-        if let Some(tag_start) = line.find("tag: ") {
-            let tag_part = &line[tag_start + 5..];
-            let tag_end = tag_part
-                .find(|c| c == ')' || c == ',')
-                .unwrap_or(tag_part.len());
-                
-            let tag_name = tag_part[..tag_end].trim().to_string();
-            Ok(tag_name)
-        } else {
-            Err(NO_TAG_ERROR.to_string())
-        }
-    } else {    
-        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
-        Err(error_text)
     }
 }
