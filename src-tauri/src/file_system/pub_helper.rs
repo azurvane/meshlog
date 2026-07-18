@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::fs::File;
+use std::io::Write;
 use chrono::{DateTime, Local};
 
 use crate::config::LOG_PATH;
@@ -42,4 +43,13 @@ pub fn create_log_md(file_path: &PathBuf) -> Result<(), String> {
     File::create(&file_path).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+pub fn append_log_md(log_file_path: &PathBuf, format_metadata: &str) -> Result<(), String> {
+    let mut file = fs::OpenOptions::new()
+        .append(true)
+        .open(log_file_path)
+        .map_err(|e| e.to_string())?;
+    
+    file.write_all(format_metadata.as_bytes()).map_err(|e| e.to_string())
 }
