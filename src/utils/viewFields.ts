@@ -1,3 +1,17 @@
+export interface GitCommitData {
+    name: string,
+    path: string;
+    tag: string;
+    summary: string;
+    detail: string;
+}
+
+export interface fileDetails {
+    name: string;
+    path: string;
+    isDir: boolean;
+}
+
 export interface FileMetadata {
     name: string;
     size_bytes: number;

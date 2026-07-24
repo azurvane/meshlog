@@ -5,7 +5,7 @@ use system::get_user_info;
 mod git;
 use git::{
     stage_commit_tag, 
-    get_commit, 
+    get_uncommited_files,
     get_tag, 
     get_tag_assetid, 
     get_latest_tag_assetid, 
@@ -21,7 +21,9 @@ use file_system::{
 };
 mod database;
 use database::{
-    mint_asset_id,
+    get_new_asset_id,
+    view_new_asset_id,
+    update_db,
     populate_db,
     get_assetid_path
 };
@@ -29,6 +31,10 @@ mod log_manager;
 use log_manager::{
     populate_log_md,
     populate_log_md_assetid,
+};
+mod string_formating;
+use string_formating::{
+    stamp_version,
 };
 
 mod config;
@@ -45,8 +51,10 @@ pub fn run() {
             get_file_flat,
             get_file_tree,
             stage_commit_tag,
-            mint_asset_id,
-            get_commit,
+            get_new_asset_id,
+            view_new_asset_id,
+            update_db,
+            get_uncommited_files,
             get_tag,
             get_tag_assetid,
             get_latest_tag_assetid,
@@ -57,7 +65,8 @@ pub fn run() {
             get_assetid_path,
             get_file_metadata,
             populate_log_md,
-            populate_log_md_assetid
+            populate_log_md_assetid,
+            stamp_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

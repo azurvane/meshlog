@@ -109,7 +109,7 @@ pub fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<Fi
     };
     
     // get asset id 
-    let asset_id = crate::database::get_assetid_path(relative_file_path_str, root_path)?;
+    let asset_id = crate::database::get_assetid_path(root_path, relative_file_path_str)?;
     
     // get the latest version
     let version = crate::git::get_latest_tag_assetid(&asset_id, root_path)?;
