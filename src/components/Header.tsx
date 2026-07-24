@@ -2,7 +2,7 @@ import React from "react";
 import { useState, useRef, useEffect } from "react";
 import {
   SlidersHorizontal,
-  PanelLeftOpen,
+  PanelRightOpen,
   Terminal,
   Settings,
   Search,
@@ -18,12 +18,14 @@ interface HeaderProps {
   visibleFields: Set<keyof FileMetadata>;
   onToggleField: (key: keyof FileMetadata) => void;
   isTerminalOpen: boolean;
+  isStampOpen: boolean;
   onToggleTerminal: () => void;
+  onToggleStamp: () => void;
 }
 
 /**
  * Top application header bar component. It renders the project navigation context (branding logotype,
- * directory hierarchy badges), an interactive global asset/hash lookup input bar, and buttons 
+ * directory hierarchy badges), an interactive global asset/hash lookup input bar, and buttons
  * to toggle sub-windows (metadata column visibility dropdown, embedded shell terminal, inspector layout, or workspace resetting dialogs).
  */
 export const Header: React.FC<HeaderProps> = ({
@@ -32,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleField,
   isTerminalOpen,
   onToggleTerminal,
+  isStampOpen,
+  onToggleStamp,
 }) => {
   // Track open/close state transitions for dashboard panels (such as the asset metadata details inspector drawer).
   const [panels, setPanels] = useState({
@@ -113,9 +117,9 @@ export const Header: React.FC<HeaderProps> = ({
         />
         <ActionButton
           label="Stamp"
-          icon={<PanelLeftOpen size={18} />}
-          isActive={panels.inspector}
-          onClick={() => togglePanel("inspector")}
+          icon={<PanelRightOpen size={18} />}
+          isActive={isStampOpen}
+          onClick={onToggleStamp}
         />
         <ActionButton
           icon={<Settings size={18} />}

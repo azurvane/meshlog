@@ -1,22 +1,8 @@
 use std::process::Command;
+use std::path::Path;
 
 use crate::config::NO_COMMIT_METADATA;
 use crate::config::CommitMetadata;
-
-// get the asset id and version 
-pub fn get_assetid_version(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
-    let tag = super::tag::get_latest_tag_relative_path(relative_file_path, root_path)?;
-    let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
-    
-    if parts.len() != 2 {
-        return Err(format!("Tag format is invalid: {}", tag));
-    }
-    
-    let version = format!("v{}", parts[0]);
-    let asset_id = parts[1].to_string();
-    
-    Ok((asset_id, version))
-}
 
 // get the commit meta data
 pub fn get_commit_metadata(root_path: &str, tag: &str) -> Result<CommitMetadata, String> {
@@ -44,6 +30,32 @@ pub fn get_commit_metadata(root_path: &str, tag: &str) -> Result<CommitMetadata,
             body: parts[5].to_string(),
         })    
     } else {
+        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+        Err(error_text)
+    }
+}
+
+// get all the commit files (remove the hidden file)
+pub fn get_commited_files(root_path: &str) -> Result<Vec<String>, String> {
+    let output = Command::new("git")
+        .args(["ls-files"])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        let files = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+        let file_vec: Vec<String> = files
+        .lines()
+        .filter(|line| {
+            !Path::new(line)
+                .components()
+                .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+        })
+        .map(String::from)
+        .collect();        
+    Ok(file_vec)
+    } else {    
         let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
         Err(error_text)
     }

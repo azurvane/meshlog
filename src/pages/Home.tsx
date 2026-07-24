@@ -1,9 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FileMetadata, DEFAULT_VISIBLE } from "../utils/viewFields";
+import {
+  FileMetadata,
+  DEFAULT_VISIBLE,
+  GitCommitData,
+  fileDetails,
+} from "../utils/viewFields";
 import { Header } from "../components/Header";
 import { MillerColumns } from "../components/MillerColumns";
 import { TerminalView } from "../components/Terminal";
+import { StampView } from "../components/stamp";
 import "../theme/colors.ts";
 import "./Home.css";
 
@@ -36,12 +42,42 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [userName, setUserName] = useState<string | null>(null);
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [isStampOpen, SetIsStampOpen] = useState(false);
   const [metadataMap, setMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
   >(new Map());
   const [activeFields, setActiveFields] =
     useState<Set<keyof FileMetadata>>(DEFAULT_VISIBLE);
+  const [eligibleSet, setEligibleSet] = useState<Set<string>>(new Set());
   const previousFoldersRef = useRef<string[]>([]);
+  const [fileInfo, SetFileInfo] = useState<fileDetails>({
+    name: "",
+    path: "",
+    isDir: false,
+  });
+  const populateFileInfo = (name: string, path: string, isDir: boolean) => {
+    SetFileInfo({
+      name: name,
+      path: path,
+      isDir: isDir,
+    });
+  };
+
+  const getAssetId = async (fileInfo: fileDetails): Promise<string> => {
+    try {
+      const assetid = await invoke<string>("get_assetid_path", {
+        rootPath: filePath,
+        relativeFilePath: fileInfo.path,
+      });
+      return assetid;
+    } catch {
+      const assetid = await invoke<string>("view_new_asset_id", {
+        rootPath: filePath,
+        filename: fileInfo.name,
+      });
+      return assetid;
+    }
+  };
 
   // Toggles the visibility state of columns in the grid view. Adds or removes selected
   // metadata fields (such as asset ID, hash, description, size) to control which data points are shown.
@@ -69,6 +105,17 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     fetchUserInfo();
   }, []);
 
+  const handleEligibleSet = async () => {
+    try {
+      const list: string[] = await invoke("get_uncommited_files", {
+        rootPath: filePath,
+      });
+      setEligibleSet(new Set(list));
+    } catch (err) {
+      console.error("Failed to refresh eligible set:", err);
+    }
+  };
+
   // Trigger project workspace setup on path changes. Instructs the backend database manager
   // to sync files, fetch directory listings, and initially cache metadata parameters for all root files.
   useEffect(() => {
@@ -85,9 +132,11 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         const tree: FileNode[] = await invoke("get_file_tree", {
           absoluteFolderPath: filePath,
         });
+
         setTreeData(tree);
         setActivePathIndices([]);
 
+        handleEligibleSet();
         await fetchMetadataForNodes(tree, filePath);
       } catch (err: any) {
         setError(err.toString());
@@ -205,6 +254,47 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     setIsTerminalOpen((prev) => !prev);
   };
 
+  const handleToggleStamp = () => {
+    SetIsStampOpen((prev) => !prev);
+  };
+
+  const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
+    try {
+      if (eligibleSet.has(data.path)) {
+        await invoke<string>("get_new_asset_id", {
+          rootPath: filePath,
+          filename: data.name,
+        });
+      }
+
+      await invoke<FileMetadata>("stage_commit_tag", {
+        rootPath: filePath,
+        relativeFilePath: data.path,
+        tag: data.tag,
+        summary: data.summary,
+        detail: data.detail,
+      });
+      handleEligibleSet();
+
+      const assetId = data.tag.split("-v")[0];
+
+      // update log md and db
+      await invoke("populate_log_md_assetid", {
+        rootPath: filePath,
+        assetId: assetId,
+      });
+      await invoke("update_db", {
+        rootPath: filePath,
+        relativeFilePath: data.path,
+      });
+
+      return true;
+    } catch (err) {
+      console.error("Commit failed:", err);
+      return false;
+    }
+  };
+
   const getVisibleFolderPaths = (
     indices: number[],
     treeData: FileNode[]
@@ -235,32 +325,57 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         onToggleField={toggleActiveFields}
         isTerminalOpen={isTerminalOpen}
         onToggleTerminal={handleToggleTerminal}
+        isStampOpen={isStampOpen}
+        onToggleStamp={handleToggleStamp}
       />
-      <main className="content-viewport">
-        {loading && (
-          <div className="status-overlay">Loading folder tree state...</div>
-        )}
-        {error && <div className="status-overlay error">Error: {error}</div>}
 
-        {!loading && !error && (
-          <MillerColumns
-            filePath={filePath}
-            treeData={treeData}
-            activePathIndices={activePathIndices}
-            onSelectNode={handleSelectNode}
-            visibleFields={activeFields}
-            metadataMap={metadataMap}
+      {/* Main core layout zone split into workspace panels and the right Stamp sidebar */}
+      <div className="workspace-container">
+        {/* Left block containing the Miller Columns viewport on top and Terminal directly underneath */}
+        <div className="left-workspace-stack">
+          <main className="content-viewport">
+            {loading && (
+              <div className="status-overlay">Loading folder tree state...</div>
+            )}
+            {error && (
+              <div className="status-overlay error">Error: {error}</div>
+            )}
+
+            {!loading && !error && (
+              <MillerColumns
+                filePath={filePath}
+                treeData={treeData}
+                activePathIndices={activePathIndices}
+                onSelectNode={handleSelectNode}
+                visibleFields={activeFields}
+                metadataMap={metadataMap}
+                eligible={eligibleSet}
+                setFileDetails={populateFileInfo}
+              />
+            )}
+          </main>
+
+          {/* Terminal renders directly below the main content viewport */}
+          {isTerminalOpen && userName && hostname && (
+            <TerminalView
+              userName={userName}
+              hostName={hostname}
+              folderName={filePath.split("/").pop()}
+            />
+          )}
+        </div>
+
+        {/* Draggable Stamp column sidebar rendering on the far right */}
+        {isStampOpen && (
+          <StampView
+            fileInfo={fileInfo}
+            versionPrefix=""
+            eligibleSet={eligibleSet}
+            handleGitCommitData={handleGitCommitData}
+            handleAssetid={getAssetId}
           />
         )}
-      </main>
-
-      {isTerminalOpen && userName && hostname && (
-        <TerminalView
-          userName={userName}
-          hostName={hostname}
-          folderName={filePath.split("/").pop()}
-        />
-      )}
+      </div>
     </div>
   );
 }

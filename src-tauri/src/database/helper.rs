@@ -18,7 +18,7 @@ use crate::config::ID;
 use crate::config::NEXT_ASSET_ID;
 
 // get the counter value and Atomically reads/increments/writes the next_asset_id counter
-pub fn increment_and_get(conn: &mut Connection) -> Result<i32, String> { // HELPER FUCNTION
+pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> { // HELPER FUCNTION
     // Start an exclusive SQLite transaction to prevent race conditions
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     
@@ -30,19 +30,35 @@ pub fn increment_and_get(conn: &mut Connection) -> Result<i32, String> { // HELP
         |row| row.get(0),
     ).map_err(|e| e.to_string())?;
     
-    let next = current + 1;
-    
     // 2. Update the counter value to the incremented one
-    let update_query = format!("UPDATE {} SET {} = ?1 WHERE {} = ?2;", NEXT_ASSET_ID, COUNTER_TABLE, ID);
+    let update_query = format!("UPDATE {} SET {} = ?1 WHERE {} = ?2;", COUNTER_TABLE, NEXT_ASSET_ID, ID);
     tx.execute(
         &update_query,
-        [next, COUNTER_ID], 
+        [current + 1, COUNTER_ID], 
     ).map_err(|e| e.to_string())?;
     
     // 3. Commit the transaction to save it to disk
     tx.commit().map_err(|e| e.to_string())?;
     
-    Ok(next)
+    Ok(current + 1)
+}
+
+// get the counter value (reads only)
+pub fn get_counter(conn: Connection) -> Result<i32, String> { // HELPER FUCNTION
+    let select_query = format!(
+        "SELECT {} FROM {} WHERE {} = ?1;",
+        NEXT_ASSET_ID,
+        COUNTER_TABLE,
+        ID
+    );
+
+    let current: i32 = conn.query_row(
+            &select_query,
+            [COUNTER_ID],
+            |row| row.get(0),
+        ).map_err(|e| e.to_string())?;
+
+    Ok(current)
 }
 
 // Filename sanitization
@@ -77,7 +93,7 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     
     let mut asset_ids_missing = Vec::new();
     for relative_file_path in commit_files_paths {
-        let (asset_id, _) = crate::git::get_assetid_version(&relative_file_path, root_path)?;
+        let (asset_id, _) = crate::string_formating::get_assetid_version(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
             let (name, created_at) = crate::file_system::get_filename_createdat(&relative_file_path, root_path)?;
             let log_path = crate::file_system::get_log_path(&relative_file_path, root_path)?;

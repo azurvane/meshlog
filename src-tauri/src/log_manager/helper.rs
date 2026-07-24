@@ -1,14 +1,13 @@
-use crate::config::CommitMetadata;
 use std::path::PathBuf;
 use std::fs;
 
-
+// get the version of which logs are missing in the log md
 pub fn get_missing_version(log_file_path: &PathBuf, tags: Vec<String>) -> Result<Vec<String>, String> {
     let file_content = fs::read_to_string(log_file_path).map_err(|e| e.to_string())?;
     let mut missing_version: Vec<String> = Vec::new();
     
     for tag in tags {
-        let version = get_version(&tag)?;
+        let version = crate::string_formating::get_version(&tag)?;
         let header = format!("## {}\n", version);
         if !file_content.contains(&header){
             missing_version.push(version);
@@ -18,24 +17,7 @@ pub fn get_missing_version(log_file_path: &PathBuf, tags: Vec<String>) -> Result
     Ok(missing_version)
 }
 
-pub fn get_version(tag: &str) -> Result<String, String> {    
-    let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
-    
-    if parts.len() != 2 {
-        return Err(format!("Tag format is invalid: {}", tag));
-    }
-    
-    let version = format!("v{}", parts[0]);
-    
-    Ok(version)
-}
-
-pub fn insert_log_entry(log_file_path: &PathBuf, entry: &str, position: usize) -> Result<(), String> {
-    let mut content = fs::read_to_string(log_file_path).map_err(|e| e.to_string())?;
-    content.insert_str(position, entry);
-    fs::write(log_file_path, content).map_err(|e| e.to_string())
-}
-
+// find the position where the missing log is suppose to go for the cronological order
 pub fn find_insert_position(existing_content: &str, version: &str) -> Result<usize, String> {
     let new_version = parse_version_tuple(version)?;
 
@@ -53,9 +35,10 @@ pub fn find_insert_position(existing_content: &str, version: &str) -> Result<usi
         }
     }
 
-    Ok(existing_content.len()) // nothing bigger found — goes at the end
+    Ok(existing_content.len()) 
 }
 
+// strip the v if present and convert in tupel of three unsign int 
 pub fn parse_version_tuple(version: &str) -> Result<(u32, u32, u32), String> {
     let version = version.strip_prefix('v').unwrap_or(version);
 
@@ -70,22 +53,3 @@ pub fn parse_version_tuple(version: &str) -> Result<(u32, u32, u32), String> {
     Ok((major, minor, patch))
 }
 
-pub fn format_commit_metadata(metadata: CommitMetadata, version: &str) -> String {
-    format!("## {}\n\
-            - **Hash (full):** {}\n\
-            - **Hash (short):** {}\n\
-            - **Author:** {}\n\
-            - **Created At:** {}\n\
-            - **Summary:** {}\n\n\
-            **Message:**\n\
-            {}\n\n\
-            ---\n\n\n",
-            version,
-            metadata.commit_hash,
-            metadata.abbreviated_hash,
-            metadata.author_name,
-            metadata.author_date,
-            metadata.subject,
-            metadata.body,
-    )
-}

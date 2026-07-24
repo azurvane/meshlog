@@ -107,6 +107,10 @@
   color: var(--color-accentCyan);
 }
 
+.column-row-grid.eligible {
+  background-color: rgba(255, 255, 0, 0.497); /* Example: Light green */
+}
+
 /* Sub-grid segment configurations mapping visual components correctly */
 .grid-left {
   display: flex;
