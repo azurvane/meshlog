@@ -90,7 +90,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="logo-badge">P</div>
         <div className="switch-view-trigger-container" ref={logoWrapperRef}>
           <button
-            className="switch-view-trigger"
+            className={`switch-view-trigger ${
+              isSwitchViewOpen ? "is-open" : ""
+            }`}
             onClick={() => SetIsSwitchViewOpen((prev) => !prev)}
             aria-expanded={isSwitchViewOpen}
           >
