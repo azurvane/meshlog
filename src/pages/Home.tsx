@@ -5,6 +5,7 @@ import {
   DEFAULT_VISIBLE,
   GitCommitData,
   fileDetails,
+  PanelView,
 } from "../utils/viewFields";
 import { Header } from "../components/Header";
 import { MillerColumns } from "../components/MillerColumns";
@@ -43,7 +44,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
-  const [metadataMap, setMetadataMap] = useState<
+  const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
+  const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
   >(new Map());
   const [activeFields, setActiveFields] =
@@ -177,7 +179,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       const { added, removed } = diff(previousFoldersRef.current, currentPaths);
 
       if (removed.length > 0) {
-        setMetadataMap((prev) => {
+        SetMetadataMap((prev) => {
           let nextMap = prev;
           removed.forEach((folderPath) => {
             nextMap = evictFolder(nextMap, folderPath);
@@ -227,7 +229,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         }
       }
     }
-    setMetadataMap((prevMap) => {
+    SetMetadataMap((prevMap) => {
       const nextOuterMap = new Map(prevMap);
       for (const [currentPath, incomingFileMetadata] of results) {
         const existingInnerMap = prevMap.get(currentPath);
@@ -256,6 +258,10 @@ export function Home({ filePath, onResetPath }: HomeProps) {
 
   const handleToggleStamp = () => {
     SetIsStampOpen((prev) => !prev);
+  };
+
+  const hanndleActivePanel = async (Panel: PanelView) => {
+    SetActiveView(Panel);
   };
 
   const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
@@ -327,6 +333,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         onToggleTerminal={handleToggleTerminal}
         isStampOpen={isStampOpen}
         onToggleStamp={handleToggleStamp}
+        currentView={activeView}
+        SetActivePanelView={hanndleActivePanel}
       />
 
       {/* Main core layout zone split into workspace panels and the right Stamp sidebar */}
@@ -341,7 +349,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
               <div className="status-overlay error">Error: {error}</div>
             )}
 
-            {!loading && !error && (
+            {!loading && !error && activeView === "repository" && (
               <MillerColumns
                 filePath={filePath}
                 treeData={treeData}

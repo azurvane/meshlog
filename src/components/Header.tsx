@@ -5,12 +5,12 @@ import {
   PanelRightOpen,
   Terminal,
   Settings,
-  Search,
-  Command,
+  ChevronDown,
 } from "lucide-react";
 import { ActionButton } from "./ActionButton";
-import { FileMetadata } from "../utils/viewFields";
+import { FileMetadata, PanelView, VIEW_REGISTRY } from "../utils/viewFields";
 import { ViewMenu } from "./ViewMenu";
+import { SwitchView } from "./SwitchView";
 import "./Header.css";
 
 interface HeaderProps {
@@ -21,6 +21,8 @@ interface HeaderProps {
   isStampOpen: boolean;
   onToggleTerminal: () => void;
   onToggleStamp: () => void;
+  currentView: PanelView;
+  SetActivePanelView: (Panel: PanelView) => void;
 }
 
 /**
@@ -36,6 +38,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTerminal,
   isStampOpen,
   onToggleStamp,
+  currentView,
+  SetActivePanelView,
 }) => {
   // Track open/close state transitions for dashboard panels (such as the asset metadata details inspector drawer).
   const [panels, setPanels] = useState({
@@ -51,59 +55,74 @@ export const Header: React.FC<HeaderProps> = ({
     }));
   };
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, SetIsMenuOpen] = useState(false);
+  const [isSwitchViewOpen, SetIsSwitchViewOpen] = useState(false);
 
-  const menuWrapperRef = useRef<HTMLDivElement>(null);
+  const viewMenuWrapperRef = useRef<HTMLDivElement>(null);
+  const logoWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Listens to global pointer down actions to check if the user clicks away from the open View menu options.
-  // If a click falls outside the menu boundary, it updates the toggle state to collapse the menu from view.
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        menuWrapperRef.current &&
-        !menuWrapperRef.current.contains(e.target as Node)
-      ) {
-        setIsMenuOpen(false);
-      }
-    };
+  function useClickOutside(
+    ref: React.RefObject<HTMLElement | null>,
+    onOutside: (isOpen: boolean) => void
+  ) {
+    useEffect(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node)) {
+          onOutside(false);
+        }
+      };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref, onOutside]);
+  }
+
+  useClickOutside(viewMenuWrapperRef, SetIsMenuOpen);
+  useClickOutside(logoWrapperRef, SetIsSwitchViewOpen);
+
+  const activeViewLabel =
+    VIEW_REGISTRY.find((v) => v.view === currentView)?.label || "Repository";
 
   return (
     <header className="app-header">
       <div className="header-left">
         <div className="logo-badge">P</div>
-        <span className="app-title">Palette</span>
-        <span className="project-divider">/</span>
-        <span className="project-name">nightfall</span>
-      </div>
+        <div className="switch-view-trigger-container" ref={logoWrapperRef}>
+          <button
+            className="switch-view-trigger"
+            onClick={() => SetIsSwitchViewOpen((prev) => !prev)}
+            aria-expanded={isSwitchViewOpen}
+          >
+            <span className="app-title">palette</span>
+            <span className="project-divider">/</span>
+            <span className="project-name">nightfall</span>
+            <span className="project-divider">/</span>
+            <span className="active-view-name">{activeViewLabel}</span>
+            <ChevronDown className="switch-view-caret" size={14} />
+          </button>
 
-      <div className="header-center">
-        <div className="search-container">
-          <span className="search-icon">
-            <Search size={18} />
-          </span>
-          <input
-            type="text"
-            placeholder="Find asset, version, or hash..."
-            className="search-input"
-          />
-          <kbd className="search-shortcut">
-            <Command size={12} />
-            <span>k</span>
-          </kbd>
+          {isSwitchViewOpen && (
+            <div className="switch-view-dropdown-wrapper">
+              <SwitchView
+                currentView={currentView}
+                onSelect={(view) => {
+                  SetActivePanelView(view);
+                  SetIsSwitchViewOpen(false);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       <div className="header-right">
-        <div ref={menuWrapperRef} className="view-menu-anchor">
+        <div ref={viewMenuWrapperRef} className="view-menu-anchor">
           <ActionButton
             label="View"
             icon={<SlidersHorizontal size={18} />}
             isActive={isMenuOpen}
-            onClick={() => setIsMenuOpen((prev) => !prev)}
+            onClick={() => SetIsMenuOpen((prev) => !prev)}
           />
           {isMenuOpen && (
             <ViewMenu visibleFields={visibleFields} onToggle={onToggleField} />

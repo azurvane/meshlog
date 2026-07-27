@@ -139,3 +139,72 @@
 .view-menu-anchor {
   position: relative;
 }
+
+/* Switcher Pill Button Container */
+.switch-view-trigger-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Breadcrumb Pill Button matching reference styling */
+.switch-view-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--color-textBright);
+  font-family: inherit;
+  font-size: 14px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.switch-view-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Palette and Nightfall muted texts */
+.switch-view-trigger .app-title,
+.switch-view-trigger .project-name {
+  color: var(--color-textMuted);
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.switch-view-trigger .project-divider {
+  color: var(--color-textMuted);
+  opacity: 0.5;
+  margin: 0 1px;
+}
+
+/* Bold & Bright Active View Name */
+.switch-view-trigger .active-view-name {
+  color: var(--color-textBright);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.switch-view-caret {
+  color: var(--color-textMuted);
+  margin-left: 2px;
+}
+
+/* Dropdown Alignment Positioning */
+.switch-view-dropdown-wrapper {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+}
+
+/* Override ViewMenu default right positioning when used inside logo wrapper */
+.switch-view-dropdown-wrapper .switch-view {
+  position: relative;
+  top: 0;
+  left: 0;
+  right: auto;
+}

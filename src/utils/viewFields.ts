@@ -31,6 +31,24 @@ export interface FieldDef {
     flexWeight?: string;
 }
 
+export enum PanelView {
+    Repository = "repository",
+    LogViewer = "logViewer",
+    Database = "database",
+}
+
+interface ViewOption {
+    view: PanelView;
+    label: string;
+    description: string;
+}
+
+export const VIEW_REGISTRY: ViewOption[] = [
+    { view: PanelView.Repository, label: "Repository", description: "Miller-column asset browser" },
+    { view: PanelView.LogViewer, label: "Log Viewer", description: "Flat markdown log index" },
+    { view: PanelView.Database, label: "Database View", description: "SQLite asset registry" },
+];
+
 export const FIELD_REGISTRY: FieldDef[] = [
     { key: "name",              label: "Name",     locked: true,  minWidth: "120px", flexWeight: "1.5fr" },
     { key: "current_version",   label: "Version",  locked: false, minWidth: "50px",  flexWeight: "0.8fr" },
