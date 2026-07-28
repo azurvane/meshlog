@@ -265,13 +265,6 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     SetActiveView(Panel);
   };
 
-  const getLogFilesPath = async (): Promise<string[]> => {
-    let pathVec = await invoke<string[]>("get_log_files", {
-      rootPath: filePath,
-    });
-    return pathVec;
-  };
-
   const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
     try {
       if (eligibleSet.has(data.path)) {
@@ -371,7 +364,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
             )}
 
             {!loading && !error && activeView === PanelView.LogView && (
-              <LogView rootPath={filePath} fetchFiles={getLogFilesPath} />
+              <LogView rootPath={filePath} />
             )}
 
             {!loading && !error && activeView === PanelView.Database && (

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./LogColumn.css";
 
 interface LogColumnProps {
-  rootPath: string;
-  fetchFiles: () => Promise<string[]>;
+  files: string[];
   selectedFileName?: string | null;
   onSelectFile: (fileName: string) => void;
   title?: string;
@@ -11,29 +10,14 @@ interface LogColumnProps {
 }
 
 export const LogColumn: React.FC<LogColumnProps> = ({
-  rootPath,
-  fetchFiles,
+  files,
   selectedFileName,
   onSelectFile,
   title = "Files",
   subtitle = "testing sub title",
 }) => {
-  const [files, setFiles] = useState<string[]>([]);
   const [columnWidth, setColumnWidth] = useState<number>(290);
   const [isResizing, setIsResizing] = useState<boolean>(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetchFiles().then((data) => {
-      if (isMounted) {
-        const sortedData = [...data].sort((a, b) => a.localeCompare(b));
-        setFiles(sortedData);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [rootPath, fetchFiles]);
 
   const startResize = (startX: number) => {
     setIsResizing(true);
@@ -41,7 +25,7 @@ export const LogColumn: React.FC<LogColumnProps> = ({
 
     const onMove = (e: MouseEvent) => {
       const delta = e.clientX - startX;
-      setColumnWidth((prev) => Math.max(200, startWidth + delta));
+      setColumnWidth(Math.max(200, startWidth + delta));
     };
 
     const onUp = () => {

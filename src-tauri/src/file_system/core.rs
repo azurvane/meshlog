@@ -7,25 +7,27 @@ use crate::config::FileNode;
 
 use crate::config::LOG_PATH;
 
-// get all the files in log folder
+// get all the files in log folder name
 #[tauri::command]
 pub fn get_log_files(root_path: &str) -> Result<Vec<String>, String> {
     let log_dir: PathBuf = PathBuf::from(root_path).join(LOG_PATH);
     let entries = fs::read_dir(&log_dir)
         .map_err(|e| format!("Failed to read directory {}: {}", log_dir.display(), e))?;
-    let mut file_paths = Vec::new();
+        
+    let mut file_names = Vec::new();
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
 
         if path.is_file() {
-            if let Some(path_str) = path.to_str() {
-                file_paths.push(path_str.to_string());
+            // Extract just the file name
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                file_names.push(file_name.to_string());
             }
         }
     }
 
-    Ok(file_paths)
+    Ok(file_names)
 }
 
 // return flat view of all files in path and subfolders exluding all the hidden files 

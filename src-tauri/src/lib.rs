@@ -30,6 +30,7 @@ use database::{
 };
 mod log_manager;
 use log_manager::{
+    get_log_content,
     populate_log_md,
     populate_log_md_assetid,
 };
@@ -66,6 +67,7 @@ pub fn run() {
             populate_db,
             get_assetid_path,
             get_file_metadata,
+            get_log_content,
             populate_log_md,
             populate_log_md_assetid,
             stamp_version

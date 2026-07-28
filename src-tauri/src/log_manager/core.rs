@@ -1,8 +1,21 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs;
 
 use crate::config::LOG_PATH;
 
+
+// get the content of the log md file
+#[tauri::command]
+pub fn get_log_content(root_path: &str, file_name: &str) -> Result<String, String> {
+    let file_path: PathBuf = PathBuf::from(root_path)
+        .join(LOG_PATH)
+        .join(file_name);
+
+    let content = fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
+
+    Ok(content)
+}
 
 // populate log md for all of the asset id
 #[tauri::command]
