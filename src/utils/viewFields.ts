@@ -33,7 +33,7 @@ export interface FieldDef {
 
 export enum PanelView {
     Repository = "repository",
-    LogViewer = "logViewer",
+    LogView = "logViewer",
     Database = "database",
 }
 
@@ -45,7 +45,7 @@ interface ViewOption {
 
 export const VIEW_REGISTRY: ViewOption[] = [
     { view: PanelView.Repository, label: "Repository", description: "Miller-column asset browser" },
-    { view: PanelView.LogViewer, label: "Log Viewer", description: "Flat markdown log index" },
+    { view: PanelView.LogView, label: "Log View", description: "Flat markdown log index" },
     { view: PanelView.Database, label: "Database View", description: "SQLite asset registry" },
 ];
 

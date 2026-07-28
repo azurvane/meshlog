@@ -1,6 +1,7 @@
 pub mod core;
 pub mod pub_helper;
 
+pub use core::get_log_files;
 pub use core::get_file_flat;
 pub use core::get_file_tree;
 pub use core::get_file_metadata;

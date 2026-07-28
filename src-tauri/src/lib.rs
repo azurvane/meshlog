@@ -15,6 +15,7 @@ use git::{
 };
 mod file_system;
 use file_system::{
+    get_log_files,
     get_file_flat, 
     get_file_tree, 
     get_file_metadata,
@@ -48,6 +49,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_user_info,
             initialize_project,
+            get_log_files,
             get_file_flat,
             get_file_tree,
             stage_commit_tag,

@@ -8,9 +8,10 @@ import {
   PanelView,
 } from "../utils/viewFields";
 import { Header } from "../components/Header";
-import { MillerColumns } from "../components/MillerColumns";
 import { TerminalView } from "../components/Terminal";
 import { StampView } from "../components/stamp";
+import { MillerColumns } from "../components/MillerColumns";
+import { LogView } from "../components/LogView.tsx";
 import "../theme/colors.ts";
 import "./Home.css";
 
@@ -44,7 +45,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
-  const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
+  const [activeView, SetActiveView] = useState<PanelView>(PanelView.LogView);
   const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
   >(new Map());
@@ -264,6 +265,13 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     SetActiveView(Panel);
   };
 
+  const getLogFilesPath = async (): Promise<string[]> => {
+    let pathVec = await invoke<string[]>("get_log_files", {
+      rootPath: filePath,
+    });
+    return pathVec;
+  };
+
   const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
     try {
       if (eligibleSet.has(data.path)) {
@@ -349,7 +357,24 @@ export function Home({ filePath, onResetPath }: HomeProps) {
               <div className="status-overlay error">Error: {error}</div>
             )}
 
-            {!loading && !error && activeView === "repository" && (
+            {!loading && !error && activeView === PanelView.Repository && (
+              <MillerColumns
+                filePath={filePath}
+                treeData={treeData}
+                activePathIndices={activePathIndices}
+                onSelectNode={handleSelectNode}
+                visibleFields={activeFields}
+                metadataMap={metadataMap}
+                eligible={eligibleSet}
+                setFileDetails={populateFileInfo}
+              />
+            )}
+
+            {!loading && !error && activeView === PanelView.LogView && (
+              <LogView rootPath={filePath} fetchFiles={getLogFilesPath} />
+            )}
+
+            {!loading && !error && activeView === PanelView.Database && (
               <MillerColumns
                 filePath={filePath}
                 treeData={treeData}
