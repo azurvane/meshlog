@@ -45,6 +45,7 @@ pub fn create_log_md(file_path: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+// add the new log at end
 pub fn append_log_md(log_file_path: &PathBuf, format_metadata: &str) -> Result<(), String> {
     let mut file = fs::OpenOptions::new()
         .append(true)
@@ -52,4 +53,11 @@ pub fn append_log_md(log_file_path: &PathBuf, format_metadata: &str) -> Result<(
         .map_err(|e| e.to_string())?;
     
     file.write_all(format_metadata.as_bytes()).map_err(|e| e.to_string())
+}
+
+// insert the missing log entry in correct position
+pub fn insert_log_entry(log_file_path: &PathBuf, entry: &str, position: usize) -> Result<(), String> {
+    let mut content = fs::read_to_string(log_file_path).map_err(|e| e.to_string())?;
+    content.insert_str(position, entry);
+    fs::write(log_file_path, content).map_err(|e| e.to_string())
 }

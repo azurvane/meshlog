@@ -1,21 +1,24 @@
-.miller-columns-container {
+.file-list-container {
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   overflow-x: auto;
   overflow-y: hidden;
   background-color: var(--color-bgMain);
   scrollbar-width: auto;
   scrollbar-color: transparent transparent;
 }
-.miller-columns-container::-webkit-scrollbar {
+
+.file-list-container::-webkit-scrollbar {
   height: 8px;
   width: 8px;
   background-color: transparent;
 }
-.miller-columns-container::-webkit-scrollbar-track {
+
+.file-list-container::-webkit-scrollbar-track {
   background-color: transparent;
 }
-.miller-columns-container::-webkit-scrollbar-thumb {
+
+.file-list-container::-webkit-scrollbar-thumb {
   background-color: transparent;
   border: none;
 }
@@ -25,19 +28,21 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
 
-/* Base structural panel columns layout definitions */
-.miller-column {
-  min-width: 280px;
+/* Base structural panel column layout definitions */
+.file-column {
+  min-width: 200px;
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   background-color: var(--color-bgCard);
   position: relative;
   flex-shrink: 0;
+  height: 100%;
 }
 
 .column-header {
@@ -83,10 +88,11 @@
   padding: 4px 0;
 }
 
-.column-row-grid {
-  display: grid;
+/* File row entry with distinct hover and selection highlight configurations */
+.file-row {
+  display: flex;
   align-items: center;
-  padding: 10px 20px 10px 10px;
+  padding: 10px 14px;
   cursor: pointer;
   user-select: none;
   font-size: 13px;
@@ -94,149 +100,28 @@
   transition: all 0.15s ease;
   border-bottom: 1px solid rgba(255, 255, 255, 0.01);
   position: relative;
-  min-width: max-content;
 }
 
-.column-row-grid:hover {
-  background-color: rgba(255, 255, 255, 0.02);
+.file-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
   color: var(--color-textBright);
 }
 
-.column-row-grid.selected {
-  background-color: rgba(0, 163, 196, 0.12);
+.file-row.selected {
+  background-color: rgba(0, 163, 196, 0.15);
   color: var(--color-accentCyan);
-}
-
-.column-row-grid.eligible {
-  background-color: rgba(255, 255, 0, 0.497); /* Example: Light green */
-}
-
-/* Sub-grid segment configurations mapping visual components correctly */
-.grid-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #d08770; /* Matte Orange dot status indicator */
-  flex-shrink: 0;
-}
-
-.asset-tag-text {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Dynamic styling matching your preview mockup files attributes text metrics */
-.grid-meta-time {
-  text-align: left;
-  font-size: 12px;
-  opacity: 0.85;
-}
-
-.grid-meta-size {
-  text-align: right;
-  font-size: 12px;
-  padding-right: 8px;
-  opacity: 0.6;
-}
-
-.grid-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  overflow: hidden;
-}
-
-.grid-meta-author {
-  font-size: 12px;
-  opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid-row-arrow {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-textMuted);
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.column-fields-sub-header {
-  display: grid;
-  align-items: center;
-  padding: 6px 20px 6px 10px;
-  background-color: rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid var(--color-border);
-  min-width: max-content;
-}
-
-.sub-header-field-label {
-  color: var(--color-textMuted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-right: 6px;
-}
-
-.column-row-grid.selected .asset-tag-text,
-.column-row-grid.selected .grid-meta-time,
-.column-row-grid.selected .grid-meta-author {
-  color: var(--color-accentCyan);
-}
-
-/* Metadata preview sidebar adjustments overrides */
-.metadata-preview {
-  width: 300px;
-  background-color: var(--color-bgMain);
-}
-
-.meta-content {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.meta-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 8px;
-}
-
-.meta-label {
-  color: var(--color-textMuted);
-}
-
-.meta-val {
-  color: var(--color-textBright);
   font-weight: 500;
 }
 
-.grid-cell {
+.file-row.selected:hover {
+  background-color: rgba(0, 163, 196, 0.22);
+}
+
+.file-cell-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 12px;
-  padding-right: 6px;
 }
 
 .column-resize-handle {
@@ -286,4 +171,5 @@
   flex-direction: column;
   flex: 1;
   min-width: max-content;
+  height: 100%;
 }

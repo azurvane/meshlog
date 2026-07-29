@@ -1,4 +1,5 @@
 use rusqlite::Connection;
+use rusqlite::params;
 use std::path::Path;
 
 // path 
@@ -16,17 +17,62 @@ use crate::config::CREATED_AT;
 
 // generate the asset id
 #[tauri::command]
-pub fn mint_asset_id(root_path: &str, filename: &str) -> Result<String, String> {
+pub fn  get_new_asset_id(root_path: &str, filename: &str) -> Result<String, String> {
     let db_path = std::path::Path::new(root_path)
         .join(DB_PATH)
         .to_string_lossy()
         .into_owned();
     let mut conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
-    let next_id = super::helper::increment_and_get(&mut conn)?;
+    let next_id = super::helper::increment_and_get_counter(&mut conn)?;
     let clean_name = super::helper::sanitize_name(filename);
     
     Ok(format!("{}_{}", clean_name, next_id))
+}
+
+// get new asset id for the view only no increment 
+#[tauri::command]
+pub fn  view_new_asset_id(root_path: &str, filename: &str) -> Result<String, String> {
+    let db_path = std::path::Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    
+    let next_id = super::helper::get_counter(conn)?;
+    let clean_name = super::helper::sanitize_name(filename);
+    
+    Ok(format!("{}_{}", clean_name, next_id))
+}
+
+// add or update db for one asset id
+#[tauri::command]
+pub fn update_db(root_path: &str, relative_file_path: &str) -> Result<(), String> {
+    let db_path = std::path::Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
+
+    let (asset_id, _) = crate::string_formating::get_assetid_version(relative_file_path, root_path)?;
+    let (name, created_at) = crate::file_system::get_filename_createdat(relative_file_path, root_path)?;
+    let log_path = crate::file_system::get_log_path(relative_file_path, root_path)?;
+
+    let query = format!(
+        "INSERT INTO {} ({}, {}, {}, {}, {}) VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT({}) DO UPDATE SET {} = ?2, {} = ?3, {} = ?4;",
+        ASSETS_TABLE,
+        ASSET_ID, CURRENT_NAME, CURRENT_PATH, LOG_PATH_SQL, CREATED_AT,
+        ASSET_ID,
+        CURRENT_NAME, CURRENT_PATH, LOG_PATH_SQL,
+    );
+
+    conn.execute(
+        &query,
+        params![asset_id, name, relative_file_path, log_path, created_at],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 // populate db with all or missing files in the assets folder
@@ -42,7 +88,7 @@ pub fn populate_db(root_path: &str) -> Result<(), String> {
         .to_string_lossy()
         .into_owned();
     
-    let mut conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
+    let mut conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     
     for chunk in missing_assets.chunks(100) {
@@ -89,7 +135,7 @@ pub fn populate_db(root_path: &str) -> Result<(), String> {
 
 // get the asset id through path of the file
 #[tauri::command]
-pub fn get_assetid_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+pub fn get_assetid_path(root_path: &str, relative_file_path: &str) -> Result<String, String> {
     let db_path = Path::new(root_path)
         .join(DB_PATH)
         .to_string_lossy()

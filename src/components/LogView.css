@@ -1,0 +1,63 @@
+.log-view-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-bgMain);
+}
+
+.log-view-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--color-bgMain);
+  box-sizing: border-box;
+}
+
+.log-view-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 36px;
+  box-sizing: border-box;
+}
+
+.log-view-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.log-view-filename {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-accentCyan);
+  font-family: monospace;
+}
+
+.log-view-preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-textMuted);
+  font-size: 13px;
+}
+
+.log-view-raw-content {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-textBright);
+}

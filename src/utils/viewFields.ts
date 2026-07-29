@@ -1,3 +1,17 @@
+export interface GitCommitData {
+    name: string,
+    path: string;
+    tag: string;
+    summary: string;
+    detail: string;
+}
+
+export interface fileDetails {
+    name: string;
+    path: string;
+    isDir: boolean;
+}
+
 export interface FileMetadata {
     name: string;
     size_bytes: number;
@@ -16,6 +30,24 @@ export interface FieldDef {
     minWidth?: string;
     flexWeight?: string;
 }
+
+export enum PanelView {
+    Repository = "repository",
+    LogView = "logViewer",
+    Database = "database",
+}
+
+interface ViewOption {
+    view: PanelView;
+    label: string;
+    description: string;
+}
+
+export const VIEW_REGISTRY: ViewOption[] = [
+    { view: PanelView.Repository, label: "Repository", description: "Miller-column asset browser" },
+    { view: PanelView.LogView, label: "Log View", description: "Flat markdown log index" },
+    { view: PanelView.Database, label: "Database View", description: "SQLite asset registry" },
+];
 
 export const FIELD_REGISTRY: FieldDef[] = [
     { key: "name",              label: "Name",     locked: true,  minWidth: "120px", flexWeight: "1.5fr" },

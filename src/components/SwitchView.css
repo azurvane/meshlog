@@ -1,0 +1,68 @@
+.switch-view {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background-color: var(--color-bgCard);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.switch-view-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-textMuted);
+  padding: 4px 16px 8px;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.switch-view-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.switch-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.switch-view-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.switch-view-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switch-view-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-textBright);
+}
+
+.switch-view-row-label--active {
+  color: var(--color-accentCyan);
+}
+
+.switch-view-row-description {
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.switch-view-check {
+  color: var(--color-accentCyan);
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}

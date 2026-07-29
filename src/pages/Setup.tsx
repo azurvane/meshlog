@@ -9,12 +9,12 @@ interface SetupProps {
 
 /**
  * Onboarding screen displayed when the application does not have a registered project workspace folder.
- * Renders a layout greeting the user and offering a button to browse their system directories 
+ * Renders a layout greeting the user and offering a button to browse their system directories
  * to choose a workspace directory that the application should index and display.
  */
 export function Setup({ onPathSelected }: SetupProps) {
   // Triggers the Tauri dialog plugin to open the operating system's native folder picker.
-  // Once a path is selected, it calls the backend Rust API to initialize metadata tracking 
+  // Once a path is selected, it calls the backend Rust API to initialize metadata tracking
   // and database structures for that folder, before notifying the root App component.
   async function handleClick() {
     try {

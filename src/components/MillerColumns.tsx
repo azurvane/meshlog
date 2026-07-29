@@ -1,6 +1,6 @@
 import React from "react";
 import { useState } from "react";
-import { FIELD_REGISTRY, FileMetadata } from "../utils/viewFields";
+import { FileMetadata, FIELD_REGISTRY } from "../utils/viewFields";
 import "./MillerColumns.css";
 
 interface FileNode {
@@ -16,6 +16,8 @@ interface MillerColumnsProps {
   onSelectNode: (indices: number[]) => void;
   visibleFields: Set<keyof FileMetadata>;
   metadataMap: Map<string, Map<string, FileMetadata>>;
+  eligible: Set<string>;
+  setFileDetails: (name: string, path: string, isDir: boolean) => void;
 }
 
 /**
@@ -30,6 +32,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
   onSelectNode,
   visibleFields,
   metadataMap,
+  eligible,
+  setFileDetails,
 }) => {
   // Converts raw byte integers into display-friendly values. Rounds down size parameters
   // and appends appropriate unit labels (e.g., 'B', 'KB', 'MB') for readable layout rendering.
@@ -44,25 +48,29 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
     title: string;
     nodes: FileNode[];
     basePath: string;
+    relPath: string;
     subtitle?: string;
   }[] = [
     {
       title: "Repository",
       nodes: treeData,
       basePath: filePath,
+      relPath: "",
       subtitle: "palette / nightfall",
     },
   ];
 
   let currentLevelNodes = treeData;
-  let runningPath = filePath;
+  let runningAbs = filePath;
+  let runningRel = "";
 
   for (let i = 0; i < activePathIndices.length; i++) {
     const selectedIdx = activePathIndices[i];
     const node = currentLevelNodes[selectedIdx];
     if (node && node.is_dir && node.children) {
       const parentName = node.name;
-      runningPath = `${runningPath}/${parentName}`;
+      runningAbs = `${runningAbs}/${parentName}`;
+      runningRel = runningRel ? `${runningRel}/${parentName}` : parentName;
 
       const subtitleName =
         i === 0
@@ -72,7 +80,8 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
       columns.push({
         title: parentName,
         nodes: node.children,
-        basePath: runningPath,
+        basePath: runningAbs,
+        relPath: runningRel,
         subtitle: subtitleName,
       });
       currentLevelNodes = node.children;
@@ -193,18 +202,24 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
                     const isSelected = selectedNodeIdx === nodeIdx;
                     const metadata =
                       metadataMap.get(column.basePath)?.get(node.name) || null;
+                    const relPath = column.relPath
+                      ? `${column.relPath}/${node.name}`
+                      : node.name;
+                    const isEligible = eligible.has(relPath);
+                    const className = `column-row-grid ${
+                      isSelected ? "selected" : isEligible ? "eligible" : ""
+                    }`.trim();
 
                     return (
                       <div
                         key={nodeIdx}
-                        className={`column-row-grid ${
-                          isSelected ? "selected" : ""
-                        }`}
+                        className={className}
                         style={{ gridTemplateColumns: gridLayoutString }}
                         onClick={() => {
                           const newIndices = activePathIndices.slice(0, colIdx);
                           newIndices.push(nodeIdx);
                           onSelectNode(newIndices);
+                          setFileDetails(node.name, relPath, node.is_dir);
                         }}
                       >
                         {visibleFieldList.map((field) => (
