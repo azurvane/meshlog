@@ -10,7 +10,7 @@ pub fn format_commit_metadata(metadata: CommitMetadata, version: &str) -> String
             - **Author:** {}\n\
             - **Created At:** {}\n\
             - **Summary:** {}\n\n\
-            **Message:**\n\
+            - **Message:**\n\
             {}\n\n\
             ---\n\n\n",
             version,

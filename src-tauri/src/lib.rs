@@ -15,6 +15,7 @@ use git::{
 };
 mod file_system;
 use file_system::{
+    get_log_files,
     get_file_flat, 
     get_file_tree, 
     get_file_metadata,
@@ -29,6 +30,7 @@ use database::{
 };
 mod log_manager;
 use log_manager::{
+    get_log_content,
     populate_log_md,
     populate_log_md_assetid,
 };
@@ -48,6 +50,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_user_info,
             initialize_project,
+            get_log_files,
             get_file_flat,
             get_file_tree,
             stage_commit_tag,
@@ -64,6 +67,7 @@ pub fn run() {
             populate_db,
             get_assetid_path,
             get_file_metadata,
+            get_log_content,
             populate_log_md,
             populate_log_md_assetid,
             stamp_version

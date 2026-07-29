@@ -28,20 +28,81 @@
   font-size: 12px;
 }
 
-.app-title {
+/* Switcher Pill Button Container */
+.switch-view-trigger-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Default state: looks like plain text */
+.switch-view-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Hide caret arrow by default */
+.switch-view-trigger .switch-view-caret {
+  color: var(--color-textMuted);
+  margin-left: 2px;
+  display: none;
+}
+
+/* Show pill border, background, and caret ONLY on hover or when menu is open */
+.switch-view-trigger:hover,
+.switch-view-trigger.is-open {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-border);
+}
+
+.switch-view-trigger:hover .switch-view-caret,
+.switch-view-trigger.is-open .switch-view-caret {
+  display: block;
+}
+
+/* Palette and Nightfall muted texts */
+.switch-view-trigger .app-title,
+.switch-view-trigger .project-name {
+  color: var(--color-textMuted);
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.switch-view-trigger .project-divider {
+  color: var(--color-textMuted);
+  opacity: 0.5;
+  margin: 0 1px;
+}
+
+/* Bold & Bright Active View Name */
+.switch-view-trigger .active-view-name {
   color: var(--color-textBright);
   font-weight: 600;
   font-size: 14px;
 }
 
-.project-divider {
-  color: var(--color-textMuted);
-  margin: 0 2px;
+/* Dropdown Alignment Positioning */
+.switch-view-dropdown-wrapper {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
 }
 
-.project-name {
-  color: var(--color-textMuted);
-  font-size: 14px;
+/* Override default right positioning when used inside breadcrumb trigger */
+.switch-view-dropdown-wrapper .switch-view {
+  position: relative;
+  top: 0;
+  left: 0;
+  right: auto;
 }
 
 .header-center {
