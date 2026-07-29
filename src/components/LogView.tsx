@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { LogColumn } from "./LogColumn";
+import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
 import { invoke } from "@tauri-apps/api/core";
+import ReactMarkdown from "react-markdown";
 import "./LogView.css";
 
 interface LogViewProp {
@@ -62,7 +63,7 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
         subtitle="/logs · markdown"
       />
 
-      <div className="log-view-preview">
+      <div className="log-view-preview" style={{ minWidth: MIN_PREVIEW_WIDTH }}>
         {selected ? (
           <div className="log-view-content-wrapper">
             <div className="log-view-header-bar">
@@ -74,7 +75,9 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
                 Loading content...
               </div>
             ) : (
-              <pre className="log-view-raw-content">{content}</pre>
+              <div className="log-view-raw-content">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
             )}
           </div>
         ) : (

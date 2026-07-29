@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./LogColumn.css";
+
+export const MIN_PREVIEW_WIDTH = 600;
 
 interface LogColumnProps {
   files: string[];
@@ -25,7 +27,8 @@ export const LogColumn: React.FC<LogColumnProps> = ({
 
     const onMove = (e: MouseEvent) => {
       const delta = e.clientX - startX;
-      setColumnWidth(Math.max(200, startWidth + delta));
+      const maxWidth = window.innerWidth - MIN_PREVIEW_WIDTH;
+      setColumnWidth(Math.min(maxWidth, Math.max(200, startWidth + delta)));
     };
 
     const onUp = () => {
