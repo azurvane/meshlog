@@ -7,6 +7,7 @@ interface LogColumnProps {
   files: string[];
   selectedFileName?: string | null;
   onSelectFile: (fileName: string) => void;
+  getContainerWidth: () => number;
   title?: string;
   subtitle?: string;
 }
@@ -15,6 +16,7 @@ export const LogColumn: React.FC<LogColumnProps> = ({
   files,
   selectedFileName,
   onSelectFile,
+  getContainerWidth,
   title = "Files",
   subtitle = "testing sub title",
 }) => {
@@ -23,11 +25,12 @@ export const LogColumn: React.FC<LogColumnProps> = ({
 
   const startResize = (startX: number) => {
     setIsResizing(true);
+    const containerWidth = getContainerWidth();
     const startWidth = columnWidth;
 
     const onMove = (e: MouseEvent) => {
       const delta = e.clientX - startX;
-      const maxWidth = window.innerWidth - MIN_PREVIEW_WIDTH;
+      const maxWidth = containerWidth - MIN_PREVIEW_WIDTH;
       setColumnWidth(Math.min(maxWidth, Math.max(200, startWidth + delta)));
     };
 

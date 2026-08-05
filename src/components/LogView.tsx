@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
 import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
@@ -13,6 +13,7 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadList() {
@@ -54,11 +55,12 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
   };
 
   return (
-    <div className="log-view-container">
+    <div className="log-view-container" ref={containerRef}>
       <LogColumn
         files={files}
         selectedFileName={selected}
         onSelectFile={handleSelectFile}
+        getContainerWidth={() => containerRef.current?.clientWidth ?? 0}
         title="Logs"
         subtitle="/logs · markdown"
       />
