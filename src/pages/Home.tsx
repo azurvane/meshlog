@@ -45,7 +45,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
-  const [activeView, SetActiveView] = useState<PanelView>(PanelView.LogView);
+  const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
   const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
   >(new Map());
