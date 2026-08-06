@@ -1,8 +1,9 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -41,8 +42,12 @@ jobs:
         run: npm install
 
       - name: Build and upload
-        uses: tauri-apps/tauri-action@v0.5.9 # Use a pinned stable version
+        uses: tauri-apps/tauri-action@v0.5.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tagName: v__VERSION__
+          releaseName: "Release v__VERSION__"
+          releaseDraft: false
+          prerelease: false
           args: ${{ matrix.args }}
