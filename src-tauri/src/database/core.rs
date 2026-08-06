@@ -33,6 +33,7 @@ pub fn get_table_name(root_path: &str) -> Result<Vec<String>, String> {
         SELECT name
         FROM sqlite_schema
         WHERE type = 'table'
+        AND name NOT LIKE 'sqlite_%'
         ORDER BY name;
         ",
     ).map_err(|e| e.to_string())?;
