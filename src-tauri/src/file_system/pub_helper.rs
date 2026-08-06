@@ -4,8 +4,6 @@ use std::fs::File;
 use std::io::Write;
 use chrono::{DateTime, Local};
 
-use crate::config::LOG_PATH;
-
 // get the file name and created_at 
 pub fn get_filename_createdat(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
     let root = Path::new(root_path);
