@@ -9,7 +9,7 @@ import {
 } from "../utils/viewFields";
 import { Header } from "../components/Header";
 import { TerminalView } from "../components/Terminal";
-import { StampView } from "../components/stamp";
+import { StampView } from "../components/Stamp";
 import { MillerColumns } from "../components/MillerColumns";
 import { LogView } from "../components/LogView.tsx";
 import { DbView } from "../components/DbView.tsx";
