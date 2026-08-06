@@ -37,6 +37,11 @@ export enum PanelView {
     Database = "database",
 }
 
+export interface TableData {
+    columns: string[];
+    rows: string[][];
+}
+
 interface ViewOption {
     view: PanelView;
     label: string;

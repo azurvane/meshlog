@@ -29,13 +29,8 @@ pub fn get_filename_createdat(relative_file_path: &str, root_path: &str) -> Resu
 // get the log path for a specific file
 pub fn get_log_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
     let file_name = get_filename_createdat(relative_file_path, root_path)?.0;
-    let log_path = Path::new(root_path)
-        .join(LOG_PATH)
-        .join(format!("{}.md", file_name))
-        .to_string_lossy()
-        .into_owned();
     
-    Ok(log_path)
+    Ok(format!("{}.md", file_name))
 }
 
 // create a md log file

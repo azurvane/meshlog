@@ -22,6 +22,8 @@ use file_system::{
 };
 mod database;
 use database::{
+    get_table_name,
+    get_table_entries,
     get_new_asset_id,
     view_new_asset_id,
     update_db,
@@ -54,6 +56,8 @@ pub fn run() {
             get_file_flat,
             get_file_tree,
             stage_commit_tag,
+            get_table_name,
+            get_table_entries,
             get_new_asset_id,
             view_new_asset_id,
             update_db,

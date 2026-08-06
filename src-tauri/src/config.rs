@@ -57,3 +57,9 @@ pub struct CommitMetadata {
     pub subject: String,
     pub body: String,
 }
+
+#[derive(Serialize)]
+pub struct TableData {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}

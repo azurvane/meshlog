@@ -12,6 +12,7 @@ import { TerminalView } from "../components/Terminal";
 import { StampView } from "../components/stamp";
 import { MillerColumns } from "../components/MillerColumns";
 import { LogView } from "../components/LogView.tsx";
+import { DbView } from "../components/DbView.tsx";
 import "../theme/colors.ts";
 import "./Home.css";
 
@@ -45,7 +46,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
-  const [activeView, SetActiveView] = useState<PanelView>(PanelView.LogView);
+  const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
   const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
   >(new Map());
@@ -368,16 +369,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
             )}
 
             {!loading && !error && activeView === PanelView.Database && (
-              <MillerColumns
-                filePath={filePath}
-                treeData={treeData}
-                activePathIndices={activePathIndices}
-                onSelectNode={handleSelectNode}
-                visibleFields={activeFields}
-                metadataMap={metadataMap}
-                eligible={eligibleSet}
-                setFileDetails={populateFileInfo}
-              />
+              <DbView rootPath={filePath} />
             )}
           </main>
 

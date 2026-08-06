@@ -1,0 +1,144 @@
+.Db-view-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-bgMain);
+}
+
+.Db-view-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--color-bgMain);
+  box-sizing: border-box;
+}
+
+.Db-view-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 36px;
+  box-sizing: border-box;
+}
+
+.Db-view-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.Db-view-filename {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-accentCyan);
+  font-family: monospace;
+}
+
+.Db-view-preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-textMuted);
+  font-size: 13px;
+}
+
+.Db-view-raw-content {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-textBright);
+}
+
+/* Container for handling table horizontal overflow */
+.Db-table-wrapper {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bgMain);
+}
+
+.Db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  text-align: left;
+  user-select: text; /* Text can be copied, but cannot be edited */
+}
+
+/* Header Styling */
+.Db-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--color-bgSecondary, #1e1e1e);
+  color: var(--color-accentCyan);
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.Db-table th:last-child {
+  border-right: none;
+}
+
+/* Body & Cell Styling */
+.Db-table td {
+  padding: 8px 14px;
+  color: var(--color-textBright);
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Db-table td:last-child {
+  border-right: none;
+}
+
+/* Hover and Selection States */
+.Db-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.Db-table tr.is-selected {
+  background-color: rgba(0, 200, 255, 0.12) !important;
+}
+
+.Db-table th.is-selected,
+.Db-table td.is-col-selected {
+  background-color: rgba(0, 200, 255, 0.08);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.Db-table-wrapper::-webkit-scrollbar,
+.Db-view-preview::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.Db-table-wrapper,
+.Db-view-preview {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
