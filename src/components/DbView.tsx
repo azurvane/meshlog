@@ -95,7 +95,7 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
                 <table className="Db-table">
                   <thead>
                     <tr>
-                      {content.columns.map((col, index) => (
+                      {content.columns.map((col) => (
                         <th
                           key={col}
                           onClick={() => handleColClick(col)}
