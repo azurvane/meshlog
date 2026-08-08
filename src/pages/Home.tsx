@@ -219,8 +219,21 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         const absolutePath = `${basePath}/${node.name}`;
         try {
           const meta = await invoke<FileMetadata>("get_file_metadata", {
-            absoluteFilePath: absolutePath,
             rootPath: filePath,
+            absoluteFilePath: absolutePath,
+          });
+          if (!results.has(basePath)) {
+            results.set(basePath, new Map());
+          }
+          results.get(basePath)!.set(node.name, meta);
+        } catch (err) {
+          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
+        }
+      } else {
+        const absolutePath = `${basePath}/${node.name}`;
+        try {
+          const meta = await invoke<FileMetadata>("get_directory_metadata", {
+            absoluteFilePath: absolutePath,
           });
           if (!results.has(basePath)) {
             results.set(basePath, new Map());

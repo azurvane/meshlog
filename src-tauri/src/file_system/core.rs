@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use chrono::{DateTime, Local};
 
+use crate::config::CommonMetadata;
 use crate::config::FileMetadata;
 use crate::config::FileNode;
 
@@ -92,17 +93,13 @@ pub fn get_file_tree(absolute_folder_path: &str) -> Result<Vec<FileNode>, String
     Ok(nodes)
 }
 
-// get the meta data about the file to be displayed
-#[tauri::command]
-pub fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<FileMetadata, String> {
+// get the common metadata for the file or directory
+pub fn get_common_metadata(absolute_file_path: &str) -> Result<CommonMetadata, String> {
     let full_path = Path::new(absolute_file_path);
-    let assets_root = Path::new(root_path);
-    let relative_file_path = full_path.strip_prefix(assets_root).map_err(|e| e.to_string())?;
-    let relative_file_path_str: &str = relative_file_path.to_str().ok_or("Path contains invalid UTF-8")?;
     let metadata_raw = fs::metadata(absolute_file_path).map_err(|e| e.to_string())?;
-    
-    // get the name of the file
-    let file_name = full_path
+
+        // get the name of the file
+        let file_name = full_path
         .file_name()
         .map(|os_str| os_str.to_string_lossy().into_owned())
         .unwrap_or_else(|| "".to_string());
@@ -132,6 +129,28 @@ pub fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<Fi
             .map(|ext| ext.to_string_lossy().into_owned())
             .unwrap_or_else(|| "file".to_string())
     };
+
+    let common_metadata = CommonMetadata{
+        name: file_name,
+        size_bytes: size,
+        modified_ddmmyyyy: modified_str,
+        created_ddmmyyyy: created_str,
+        is_dir: is_directory,
+        file_type,
+    };
+
+    Ok(common_metadata)
+}
+
+// get the meta data about the file to be displayed
+#[tauri::command]
+pub fn get_file_metadata(root_path: &str, absolute_file_path: &str) -> Result<FileMetadata, String> {
+    let full_path = Path::new(absolute_file_path);
+    let assets_root = Path::new(root_path);
+    let relative_file_path = full_path.strip_prefix(assets_root).map_err(|e| e.to_string())?;
+    let relative_file_path_str: &str = relative_file_path.to_str().ok_or("Path contains invalid UTF-8")?;
+    
+    let common_metadata = get_common_metadata(absolute_file_path)?;
     
     // get asset id 
     let asset_id = crate::database::get_assetid_path(root_path, relative_file_path_str)?;
@@ -144,14 +163,35 @@ pub fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<Fi
     
     // get latest tag for the file
     let file_metadata = FileMetadata{
-        name: file_name,
-        size_bytes: size,
-        modified_ddmmyyyy: modified_str,
-        created_ddmmyyyy: created_str,
-        is_dir: is_directory,
-        file_type,
+        name: common_metadata.name,
+        size_bytes: common_metadata.size_bytes,
+        modified_ddmmyyyy: common_metadata.modified_ddmmyyyy,
+        created_ddmmyyyy: common_metadata.created_ddmmyyyy,
+        is_dir: common_metadata.is_dir,
+        file_type: common_metadata.file_type,
         current_version: version,
         current_hash: hash
+    };
+    
+    Ok(file_metadata)
+}
+
+// get the metadata for the directory to be displayed
+#[tauri::command]
+pub fn get_directory_metadata(absolute_file_path: &str) -> Result<FileMetadata, String> {
+    
+    let common_metadata = get_common_metadata(absolute_file_path)?;
+    
+    // get latest tag for the file
+    let file_metadata = FileMetadata{
+        name: common_metadata.name,
+        size_bytes: common_metadata.size_bytes,
+        modified_ddmmyyyy: common_metadata.modified_ddmmyyyy,
+        created_ddmmyyyy: common_metadata.created_ddmmyyyy,
+        is_dir: common_metadata.is_dir,
+        file_type: common_metadata.file_type,
+        current_version: " - ".to_string(),
+        current_hash: " - ".to_string()
     };
     
     Ok(file_metadata)
