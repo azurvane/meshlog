@@ -7,7 +7,7 @@ pub fn get_missing_version(log_file_path: &PathBuf, tags: Vec<String>) -> Result
     let mut missing_version: Vec<String> = Vec::new();
     
     for tag in tags {
-        let version = crate::string_formating::get_version(&tag)?;
+        let (_, version) = crate::string_formating::get_assetid_version_tag(&tag)?;
         let header = format!("## {}\n", version);
         if !file_content.contains(&header){
             missing_version.push(version);

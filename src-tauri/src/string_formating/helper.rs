@@ -23,8 +23,8 @@ pub fn format_commit_metadata(metadata: CommitMetadata, version: &str) -> String
     )
 }
 
-// extract version from the tag
-pub fn get_version(tag: &str) -> Result<String, String> {    
+// extract asset id and version from tag
+pub fn get_assetid_version_tag(tag: &str) -> Result<(String, String), String> {
     let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
     
     if parts.len() != 2 {
@@ -32,12 +32,13 @@ pub fn get_version(tag: &str) -> Result<String, String> {
     }
     
     let version = format!("v{}", parts[0]);
+    let asset_id = parts[1].to_string();
     
-    Ok(version)
+    Ok((asset_id, version))
 }
 
-// get the asset id and version 
-pub fn get_assetid_version(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
+// get the asset id and version through the path
+pub fn get_assetid_version_path(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
     let tag = crate::git::get_latest_tag_relative_path(root_path, relative_file_path)?;
     let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
     

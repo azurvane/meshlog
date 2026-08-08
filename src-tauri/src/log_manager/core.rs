@@ -23,7 +23,7 @@ pub fn populate_log_md(root_path: &str) -> Result<(), String> {
     let commit_files_paths = crate::git::get_commited_files(root_path)?;
     
     for relative_file_path in commit_files_paths {
-        let (asset_id, _) = crate::string_formating::get_assetid_version(&relative_file_path, root_path)?;
+        let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
         populate_log_md_assetid(root_path, &asset_id)?;
     }
     
@@ -43,7 +43,7 @@ pub fn populate_log_md_assetid(root_path: &str, asset_id: &str) -> Result<(), St
         crate::file_system::create_log_md(&log_file_path)?;
         for tag in &tags {
             let commit_metadata = crate::git::get_commit_metadata(root_path, &tag)?;
-            let version = crate::string_formating::get_version(&tag)?;
+            let (_, version) = crate::string_formating::get_assetid_version_tag(&tag)?;
             let format_metadata = crate::string_formating::format_commit_metadata(commit_metadata, &version);
             crate::file_system::append_log_md(&log_file_path, &format_metadata)?;
         }

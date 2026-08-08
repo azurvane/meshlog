@@ -18,7 +18,7 @@ use crate::config::ID;
 use crate::config::NEXT_ASSET_ID;
 
 // get the counter value and Atomically reads/increments/writes the next_asset_id counter
-pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> { // HELPER FUCNTION
+pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> {
     // Start an exclusive SQLite transaction to prevent race conditions
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     
@@ -44,7 +44,7 @@ pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> {
 }
 
 // get the counter value (reads only)
-pub fn get_counter(conn: Connection) -> Result<i32, String> { // HELPER FUCNTION
+pub fn get_counter(conn: Connection) -> Result<i32, String> {
     let select_query = format!(
         "SELECT {} FROM {} WHERE {} = ?1;",
         NEXT_ASSET_ID,
@@ -62,7 +62,7 @@ pub fn get_counter(conn: Connection) -> Result<i32, String> { // HELPER FUCNTION
 }
 
 // Filename sanitization
-pub fn sanitize_name(filename: &str) -> String { // HELPER FUCNTION
+pub fn sanitize_name(filename: &str) -> String {
     let stem = filename.split('.').next().unwrap_or(filename);
     stem.to_lowercase()
         .chars()
@@ -93,7 +93,7 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     
     let mut asset_ids_missing = Vec::new();
     for relative_file_path in commit_files_paths {
-        let (asset_id, _) = crate::string_formating::get_assetid_version(&relative_file_path, root_path)?;
+        let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
             let (name, created_at) = crate::file_system::get_filename_createdat(&relative_file_path, root_path)?;
             let log_path = crate::file_system::get_log_path(&relative_file_path, root_path)?;
@@ -102,4 +102,32 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     }
     
     Ok(asset_ids_missing)
+}
+
+// get the counter value by comparing all the asset id
+pub fn get_counter_value(root_path: &str) -> Result<i32, String> {
+    let tags = crate::git::get_tag(root_path)?;
+    let mut counters = HashSet::new();
+    
+    for tag in tags {
+        let (asset_id, _) = crate::string_formating::get_assetid_version_tag(&tag)?;
+        let parts: Vec<&str> = asset_id.rsplitn(2, "_").collect();
+        
+        if parts.len() < 2 {
+            return Err(format!("Invalid asset_id format: {}", asset_id));
+        }
+        
+        let counter = parts[0]
+            .parse::<i32>()
+            .map_err(|e| format!("Failed to parse counter: {}", e))?;
+        
+        counters.insert(counter);
+    } 
+    
+    let next_counter = match counters.iter().max() {
+        Some(&max_val) => max_val + 1,
+        None => 1,
+    };
+    
+    Ok(next_counter)
 }

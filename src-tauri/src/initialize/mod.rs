@@ -34,11 +34,11 @@ pub fn initialize_project(root_path: &str) -> Result<String, String> {
     if !Path::new(&db_path).exists() {
         let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
         initialise_assets_tables(&db).map_err(|e| e.to_string())?;
-        initialise_counters_tables(&db).map_err(|e| e.to_string())?;
+        initialise_counters_tables(root_path, &db)?;
     }
     else {
         let db = Connection::open(&db_path).map_err(|e| e.to_string())?;
-        verify_database_state(&db).map_err(|e| e.to_string())?;
+        verify_database_state(root_path, &db).map_err(|e| e.to_string())?;
     }
     
     Ok("Project initialized".to_string())
@@ -68,7 +68,8 @@ fn initialise_assets_tables(conn: &Connection) -> Result<(), String> {
 }
 
 // initialise the counter table for the assets.sqlite
-fn initialise_counters_tables(conn: &Connection) -> Result<(), String> {
+fn initialise_counters_tables(root_path: &str, conn: &Connection) -> Result<(), String> {
+    let next_counter = crate::database::get_counter_value(root_path)?;
     let create_table_query = format!(
         "CREATE TABLE IF NOT EXISTS {} (
             {} INTEGER PRIMARY KEY CHECK ({} = {}),
@@ -82,14 +83,14 @@ fn initialise_counters_tables(conn: &Connection) -> Result<(), String> {
     );
     conn.execute(&create_table_query, []).map_err(|e| e.to_string())?;
 
-    let insert_query = format!("INSERT OR IGNORE INTO {} ({}, {}) VALUES (0, 1)", COUNTER_TABLE, ID, NEXT_ASSET_ID);
-    conn.execute(&insert_query, []).map_err(|e| e.to_string())?;
+    let insert_query = format!("INSERT OR IGNORE INTO {} ({}, {}) VALUES (0, ?1)", COUNTER_TABLE, ID, NEXT_ASSET_ID);
+    conn.execute(&insert_query, [next_counter]).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 // verify if both tables are present 
-fn verify_database_state(conn: &Connection) -> Result<(), String> {
+fn verify_database_state(root_path: &str, conn: &Connection) -> Result<(), String> {
     // 1. Check if 'ASSETS_TABLE' table exists
     let assets_query = format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}';", ASSETS_TABLE);
     let assets_exists: i64 = conn.query_row(&assets_query, [], |row| row.get(0)).map_err(|e| e.to_string())?;
@@ -105,7 +106,7 @@ fn verify_database_state(conn: &Connection) -> Result<(), String> {
     
     if counters_exists == 0 {
         println!("'{}' table missing! Initialising...", COUNTER_TABLE);
-        initialise_counters_tables(conn)?;
+        initialise_counters_tables(root_path, conn)?;
     } else {
         // 3. If COUNTER_TABLE exists, validate its contents
         let validate_query = format!("SELECT COUNT(*), MAX({}) FROM {};", NEXT_ASSET_ID, COUNTER_TABLE);
@@ -119,7 +120,7 @@ fn verify_database_state(conn: &Connection) -> Result<(), String> {
             println!("'{}' table is empty! Dropping and re-initialising...", COUNTER_TABLE);
             let drop_query = format!("DROP TABLE {};", COUNTER_TABLE);
             conn.execute(&drop_query, []).map_err(|e| e.to_string())?;
-            initialise_counters_tables(conn)?;
+            initialise_counters_tables(root_path, conn)?;
         } else if row_count > 1 {
             return Err(format!("Database corruption: '{}' table has {} rows (expected exactly 1).", COUNTER_TABLE, row_count));
         } else {
