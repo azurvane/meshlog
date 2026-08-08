@@ -12,6 +12,7 @@ use git::{
     get_all_hash_assetid,
     get_latest_hash_assetid,
     generate_tag,
+    get_latest_tag_relative_path,
 };
 mod file_system;
 use file_system::{
@@ -68,6 +69,7 @@ pub fn run() {
             get_all_hash_assetid,
             get_latest_hash_assetid,
             generate_tag,
+            get_latest_tag_relative_path,
             populate_db,
             get_assetid_path,
             get_file_metadata,

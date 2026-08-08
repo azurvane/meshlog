@@ -14,9 +14,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # 1. Apple Silicon Mac (M1/M2/M3/M4)
           - platform: macos-latest
-            args: ""
+            os-name: macos-arm64
+            args: "--target aarch64-apple-darwin"
+
+          # 2. Intel Mac
+          - platform: macos-latest
+            os-name: macos-intel
+            args: "--target x86_64-apple-darwin"
+
+          # 3. Linux (Ubuntu/Debian-based)
           - platform: ubuntu-latest
+            os-name: linux-amd64
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -26,6 +36,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-latest'
@@ -47,7 +59,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: "Release v__VERSION__"
-          releaseDraft: false
+          releaseName: "Version __VERSION__"
+          releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          # Cleanly rename output files based on the matrix os-name and original extension/bundle type
+          releaseAssetNamePattern: "meshlog_[version]_[os-name].[bundle]"
