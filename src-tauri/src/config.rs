@@ -36,6 +36,17 @@ pub struct FileNode {
 
 // file metadata node data structure
 #[derive(Serialize)]
+pub struct CommonMetadata {
+    pub name: String,
+    pub size_bytes: u64,
+    pub modified_ddmmyyyy: String,
+    pub created_ddmmyyyy: String,
+    pub is_dir: bool,
+    pub file_type: String,
+}
+
+// file metadata node data structure
+#[derive(Serialize)]
 pub struct FileMetadata {
     pub name: String,
     pub size_bytes: u64,

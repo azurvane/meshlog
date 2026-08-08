@@ -128,8 +128,6 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
     metadata: FileMetadata | null
   ): string => {
     if (key === "name") return node.name;
-    if (node.is_dir) return "—";
-
     if (key === "size_bytes") {
       return formatBytes(metadata?.size_bytes);
     }
@@ -202,8 +200,9 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
                     const isSelected = selectedNodeIdx === nodeIdx;
                     const metadata =
                       metadataMap.get(column.basePath)?.get(node.name) || null;
-                    const relPath = column.relPath
-                      ? `${column.relPath}/${node.name}`
+                    const absoluteNodePath = `${column.basePath}/${node.name}`;
+                    const relPath = absoluteNodePath.startsWith(filePath + "/")
+                      ? absoluteNodePath.slice(filePath.length + 1)
                       : node.name;
                     const isEligible = eligible.has(relPath);
                     const className = `column-row-grid ${
@@ -212,7 +211,7 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
 
                     return (
                       <div
-                        key={nodeIdx}
+                        key={node.name}
                         className={className}
                         style={{ gridTemplateColumns: gridLayoutString }}
                         onClick={() => {

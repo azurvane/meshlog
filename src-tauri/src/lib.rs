@@ -20,6 +20,7 @@ use file_system::{
     get_file_flat, 
     get_file_tree, 
     get_file_metadata,
+    get_directory_metadata,
 };
 mod database;
 use database::{
@@ -73,6 +74,7 @@ pub fn run() {
             populate_db,
             get_assetid_path,
             get_file_metadata,
+            get_directory_metadata,
             get_log_content,
             populate_log_md,
             populate_log_md_assetid,

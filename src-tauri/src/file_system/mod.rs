@@ -5,6 +5,7 @@ pub use core::get_log_files;
 pub use core::get_file_flat;
 pub use core::get_file_tree;
 pub use core::get_file_metadata;
+pub use core::get_directory_metadata;
 
 pub use pub_helper::get_filename_createdat;
 pub use pub_helper::get_log_path;
