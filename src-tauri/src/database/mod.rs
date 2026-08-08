@@ -8,3 +8,5 @@ pub use core::view_new_asset_id;
 pub use core::update_db;
 pub use core::populate_db;
 pub use core::get_assetid_path;
+
+pub use helper::get_counter_value;

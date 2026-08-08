@@ -120,7 +120,7 @@ pub fn update_db(root_path: &str, relative_file_path: &str) -> Result<(), String
         .into_owned();
     let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
 
-    let (asset_id, _) = crate::string_formating::get_assetid_version(relative_file_path, root_path)?;
+    let (asset_id, _) = crate::string_formating::get_assetid_version_path(relative_file_path, root_path)?;
     let (name, created_at) = crate::file_system::get_filename_createdat(relative_file_path, root_path)?;
     let log_path = crate::file_system::get_log_path(relative_file_path, root_path)?;
 
