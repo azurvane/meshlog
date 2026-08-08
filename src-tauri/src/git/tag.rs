@@ -44,7 +44,7 @@ pub fn get_tag_assetid(asset_id: &str, root_path: &str) -> Result<Vec<String>, S
 
 // get the latest tag for a specific asset id
 #[tauri::command]
-pub fn get_latest_tag_assetid(asset_id: &str, root_path: &str) -> Result<String, String> {
+pub fn get_latest_tag_assetid(root_path: &str, asset_id: &str) -> Result<String, String> {
     let pattern = format!("{}-v*", asset_id);
     
     let output = Command::new("git")
@@ -64,7 +64,8 @@ pub fn get_latest_tag_assetid(asset_id: &str, root_path: &str) -> Result<String,
 }
 
 // get latest tag for a perticular file by relative path
-pub fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
+#[tauri::command]
+pub fn get_latest_tag_relative_path(root_path: &str, relative_file_path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["log", "-n", "1", "--oneline", "--decorate", "--", relative_file_path])
         .current_dir(root_path)
@@ -93,8 +94,8 @@ pub fn get_latest_tag_relative_path(relative_file_path: &str, root_path: &str) -
 
 // generate new tag
 #[tauri::command]
-pub fn generate_tag(asset_id: &str, root_path: &str) -> Result<String, String> {
-    match  get_latest_tag_assetid(asset_id, root_path) {
+pub fn generate_tag(root_path: &str, asset_id: &str) -> Result<String, String> {
+    match  get_latest_tag_assetid(root_path, asset_id) {
         Ok(tag) =>  {
             let len = tag.len();
             

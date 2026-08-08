@@ -38,7 +38,7 @@ pub fn get_version(tag: &str) -> Result<String, String> {
 
 // get the asset id and version 
 pub fn get_assetid_version(relative_file_path: &str, root_path: &str) -> Result<(String, String), String> {
-    let tag = crate::git::get_latest_tag_relative_path(relative_file_path, root_path)?;
+    let tag = crate::git::get_latest_tag_relative_path(root_path, relative_file_path)?;
     let parts: Vec<&str> = tag.rsplitn(2, "-v").collect();
     
     if parts.len() != 2 {

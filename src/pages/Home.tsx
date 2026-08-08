@@ -386,6 +386,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         {/* Draggable Stamp column sidebar rendering on the far right */}
         {isStampOpen && (
           <StampView
+            rootPath={filePath}
             fileInfo={fileInfo}
             versionPrefix=""
             eligibleSet={eligibleSet}

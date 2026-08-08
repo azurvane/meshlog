@@ -137,10 +137,10 @@ pub fn get_file_metadata(absolute_file_path: &str, root_path: &str) -> Result<Fi
     let asset_id = crate::database::get_assetid_path(root_path, relative_file_path_str)?;
     
     // get the latest version
-    let version = crate::git::get_latest_tag_assetid(&asset_id, root_path)?;
+    let version = crate::git::get_latest_tag_assetid(root_path, &asset_id)?;
     
     // get the latest hash
-    let hash = crate::git::get_hash_assetid(&version, root_path)?;
+    let hash = crate::git::get_hash_assetid(root_path, &version)?;
     
     // get latest tag for the file
     let file_metadata = FileMetadata{

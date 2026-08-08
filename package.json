@@ -1,13 +1,14 @@
 {
+  "type": "module",
   "name": "meshlog",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "version": "node scripts/sync-version.js && git add src-tauri/tauri.conf.json src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
