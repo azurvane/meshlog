@@ -128,8 +128,6 @@ export const MillerColumns: React.FC<MillerColumnsProps> = ({
     metadata: FileMetadata | null
   ): string => {
     if (key === "name") return node.name;
-    // if (node.is_dir) return "—";
-
     if (key === "size_bytes") {
       return formatBytes(metadata?.size_bytes);
     }

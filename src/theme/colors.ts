@@ -8,6 +8,8 @@ export const colors = {
   textDark: "#05070a",     // Dark text for contrast (e.g. on cyan button)
   accentCyan: "#00A3C4",   // The vibrant cyan used for terminals/buttons
   accentCyanHover: "#00b4d4", // The bright cyan highlight state on hover
+  accentYellow: "#F59E0B",   // Refined amber/gold for eligible highlights
+  accentYellowHover: "#D97706", // Darker amber for hover states
 };
 
 // Inject colors as CSS custom properties on the document root

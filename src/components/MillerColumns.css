@@ -108,7 +108,13 @@
 }
 
 .column-row-grid.eligible {
-  background-color: rgba(255, 255, 0, 0.497); /* Example: Light green */
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--color-accentYellow);
+}
+
+.column-row-grid.eligible:hover {
+  background-color: rgba(245, 158, 11, 0.25);
+  color: var(--color-accentYellow);
 }
 
 /* Sub-grid segment configurations mapping visual components correctly */

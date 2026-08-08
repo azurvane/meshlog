@@ -152,14 +152,15 @@ pub fn get_file_metadata(root_path: &str, absolute_file_path: &str) -> Result<Fi
     
     let common_metadata = get_common_metadata(absolute_file_path)?;
     
-    // get asset id 
-    let asset_id = crate::database::get_assetid_path(root_path, relative_file_path_str)?;
-    
-    // get the latest version
-    let version = crate::git::get_latest_tag_assetid(root_path, &asset_id)?;
-    
-    // get the latest hash
-    let hash = crate::git::get_hash_assetid(root_path, &version)?;
+    // get asset id with fallback for new/unregistered files
+    let (version, hash) = match crate::database::get_assetid_path(root_path, relative_file_path_str) {
+        Ok(asset_id) => {
+            let ver = crate::git::get_latest_tag_assetid(root_path, &asset_id).unwrap_or_else(|_| " - ".to_string());
+            let hsh = crate::git::get_hash_assetid(root_path, &ver).unwrap_or_else(|_| " - ".to_string());
+            (ver, hsh)
+        }
+        Err(_) => (" - ".to_string(), " - ".to_string()),
+    };
     
     // get latest tag for the file
     let file_metadata = FileMetadata{
