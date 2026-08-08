@@ -114,7 +114,17 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       const list: string[] = await invoke("get_uncommited_files", {
         rootPath: filePath,
       });
-      setEligibleSet(new Set(list));
+      const allEligiblePaths = new Set<string>();
+      list.forEach((filePathStr) => {
+        allEligiblePaths.add(filePathStr);
+        const parts = filePathStr.split("/");
+        let currentPath = "";
+        for (let i = 0; i < parts.length - 1; i++) {
+          currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+          allEligiblePaths.add(currentPath);
+        }
+      });
+      setEligibleSet(allEligiblePaths);
     } catch (err) {
       console.error("Failed to refresh eligible set:", err);
     }
