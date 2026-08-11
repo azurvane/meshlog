@@ -44,7 +44,7 @@ pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> {
 }
 
 // get the counter value (reads only)
-pub fn get_counter(conn: Connection) -> Result<i32, String> {
+pub fn get_counter(conn: &Connection) -> Result<i32, String> {
     let select_query = format!(
         "SELECT {} FROM {} WHERE {} = ?1;",
         NEXT_ASSET_ID,

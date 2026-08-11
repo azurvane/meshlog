@@ -105,7 +105,7 @@ pub fn  view_new_asset_id(root_path: &str, filename: &str) -> Result<String, Str
         .into_owned();
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
-    let next_id = super::helper::get_counter(conn)?;
+    let next_id = super::helper::get_counter(&conn)?;
     let clean_name = super::helper::sanitize_name(filename);
     
     Ok(format!("{}_{}", clean_name, next_id))

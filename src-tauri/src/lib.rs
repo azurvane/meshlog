@@ -1,3 +1,11 @@
+use std::sync::Mutex;
+use notify_debouncer_mini::{
+    Debouncer, 
+    notify::{
+        RecommendedWatcher
+    }
+};
+
 mod initialize;
 use initialize::initialize_project;
 mod system;
@@ -42,6 +50,11 @@ mod string_formating;
 use string_formating::{
     stamp_version,
 };
+mod watcher;
+use watcher::{
+    start_watching,
+    stop_watching
+};
 
 mod config;
 
@@ -51,6 +64,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .manage(Mutex::new(None::<Debouncer<RecommendedWatcher>>))
         .invoke_handler(tauri::generate_handler![
             get_user_info,
             initialize_project,
@@ -78,7 +92,9 @@ pub fn run() {
             get_log_content,
             populate_log_md,
             populate_log_md_assetid,
-            stamp_version
+            stamp_version,
+            start_watching,
+            stop_watching
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
