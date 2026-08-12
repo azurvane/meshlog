@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import ReactMarkdown from "react-markdown";
 import "./LogView.css";
 
@@ -15,40 +16,59 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function loadList() {
-      try {
-        const fetchedFiles = await invoke<string[]>("get_log_files", {
-          rootPath,
-        });
-        const sorted = [...fetchedFiles].sort((a, b) => a.localeCompare(b));
-        setFiles(sorted);
-      } catch (err) {
-        console.error("Failed to list logs:", err);
-      }
+  const loadList = async () => {
+    try {
+      const fetchedFiles = await invoke<string[]>("get_log_files", {
+        rootPath,
+      });
+      const sorted = [...fetchedFiles].sort((a, b) => a.localeCompare(b));
+      setFiles(sorted);
+    } catch (err) {
+      console.error("Failed to list logs:", err);
     }
+  };
+
+  const loadContent = async () => {
+    if (!selected) return;
+    setIsLoading(true);
+    try {
+      const text = await invoke<string>("get_log_content", {
+        rootPath,
+        fileName: selected,
+      });
+      setContent(text);
+    } catch (err) {
+      console.error("Failed to read log:", err);
+      setContent("");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadList();
   }, [rootPath]);
 
   useEffect(() => {
-    if (!selected) return;
-    async function loadContent() {
-      setIsLoading(true);
-      try {
-        const text = await invoke<string>("get_log_content", {
-          rootPath,
-          fileName: selected,
-        });
-        setContent(text);
-      } catch (err) {
-        console.error("Failed to read log:", err);
-        setContent("");
-      } finally {
-        setIsLoading(false);
-      }
-    }
     loadContent();
   }, [selected, rootPath]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<string>("fs-changed", (event) => {
+      const changedSubdir = event.payload;
+      const isLogsChange =
+        changedSubdir === ".logs" || changedSubdir.startsWith(".logs/");
+
+      if (isLogsChange) {
+        loadList();
+        loadContent();
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlistenFn) => unlistenFn());
+    };
+  }, [rootPath, selected]);
 
   const handleSelectFile = async (selectedFileName: string) => {
     setSelected(selectedFileName);

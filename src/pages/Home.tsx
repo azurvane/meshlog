@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   FileMetadata,
   DEFAULT_VISIBLE,
@@ -130,6 +131,22 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     }
   };
 
+  const loadFileTree = async () => {
+    try {
+      const tree: FileNode[] = await invoke("get_file_tree", {
+        absoluteFolderPath: filePath,
+      });
+
+      setTreeData(tree);
+      setActivePathIndices([]);
+
+      handleEligibleSet();
+      await fetchMetadataForNodes(tree, filePath);
+    } catch (err: any) {
+      setError(err.toString());
+    }
+  };
+
   // Trigger project workspace setup on path changes. Instructs the backend database manager
   // to sync files, fetch directory listings, and initially cache metadata parameters for all root files.
   useEffect(() => {
@@ -142,16 +159,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         await invoke("initialize_project", { rootPath: filePath });
         await invoke("populate_db", { rootPath: filePath });
         await invoke("populate_log_md", { rootPath: filePath });
-
-        const tree: FileNode[] = await invoke("get_file_tree", {
-          absoluteFolderPath: filePath,
-        });
-
-        setTreeData(tree);
-        setActivePathIndices([]);
-
-        handleEligibleSet();
-        await fetchMetadataForNodes(tree, filePath);
+        await invoke("start_watching", { rootPath: filePath });
+        await loadFileTree();
       } catch (err: any) {
         setError(err.toString());
       } finally {
@@ -159,6 +168,22 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       }
     }
     loadProject();
+
+    return () => {
+      invoke("stop_watcher").catch((err) =>
+        console.error("Failed to stop watcher:", err)
+      );
+    };
+  }, [filePath]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<string>("fs-changed", () => {
+      loadFileTree();
+    });
+
+    return () => {
+      unlistenPromise.then((unlistenFn) => unlistenFn());
+    };
   }, [filePath]);
 
   function diff(oldList: string[], newList: string[]) {
