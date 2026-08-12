@@ -24,7 +24,7 @@ export const TerminalView: React.FC<TerminalViewProp> = ({
   const terminalRef = React.useRef<Terminal | null>(null);
 
   const [height, setHeight] = useState<number>(260);
-  const [command, SetCommand] = useState<string>("");
+  // const [command, SetCommand] = useState<string>("");
   const isDragging = useRef<boolean>(false);
   const startY = useRef<number>(0);
   const startHeight = useRef<number>(0);

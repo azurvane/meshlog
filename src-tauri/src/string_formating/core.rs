@@ -2,7 +2,7 @@
 // wrapper function for stamp adds the assetid
 #[tauri::command]
 pub fn stamp_version(assetid: &str, version: &str) -> Result<String, String>{
-    let (_, _, _) = crate::log_manager::parse_version_tuple(version)?;
+    let (_, _, _) = crate::string_formating::parse_version_tuple(version)?;
     
     Ok(format!("{}-v{}", assetid, version))
 }

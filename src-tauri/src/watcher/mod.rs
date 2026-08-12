@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 use notify_debouncer_mini::{
     new_debouncer, 
@@ -30,7 +30,7 @@ pub fn start_watching(
             match result {
                 Ok(events) =>{
                     for event in events {
-                        match get_relative_directory_path(event.path, &root_for_closure) {
+                        match crate::string_formating::get_relative_directory_path(event.path, &root_for_closure) {
                             Ok(subdir_string) => { let _ = handle_for_closure.emit("fs-changed", subdir_string); }
                             Err(e) => { eprintln!("failed to compute subdir: {}", e); }
                         }
@@ -62,22 +62,4 @@ pub fn stop_watching(state: State<WatcherState>) -> Result<(), String> {
     *guard = None;
     Ok(())
 
-}
-
-
-// helper function 
-// find the relative path to the sub-directory 
-// move to string formating later
-pub fn get_relative_directory_path(full_path: PathBuf, root_path: &str) -> Result<String, String> {
-    let root = Path::new(root_path);
-
-    let relative = full_path
-        .strip_prefix(root)
-        .map_err(|e| format!("Path is not inside root: {e}"))?;
-    let subdir = relative
-        .parent()
-        .ok_or_else(|| "Failed to get parent directory".to_string())?;
-    let subdir_string = subdir.to_string_lossy().to_string();
-
-    Ok(subdir_string)
 }

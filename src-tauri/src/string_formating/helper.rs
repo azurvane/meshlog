@@ -1,4 +1,4 @@
-
+use std::path::{Path, PathBuf};
 
 use crate::config::CommitMetadata;
 
@@ -50,4 +50,34 @@ pub fn get_assetid_version_path(relative_file_path: &str, root_path: &str) -> Re
     let asset_id = parts[1].to_string();
     
     Ok((asset_id, version))
+}
+
+// find the relative path to the sub-directory 
+pub fn get_relative_directory_path(full_path: PathBuf, root_path: &str) -> Result<String, String> {
+    let root = Path::new(root_path);
+
+    let relative = full_path
+        .strip_prefix(root)
+        .map_err(|e| format!("Path is not inside root: {e}"))?;
+    let subdir = relative
+        .parent()
+        .ok_or_else(|| "Failed to get parent directory".to_string())?;
+    let subdir_string = subdir.to_string_lossy().to_string();
+
+    Ok(subdir_string)
+}
+
+// strip the v if present and convert in tupel of three unsign int 
+pub fn parse_version_tuple(version: &str) -> Result<(u32, u32, u32), String> {
+    let version = version.strip_prefix('v').unwrap_or(version);
+
+    let nums: Vec<&str> = version.splitn(3, '.').collect();
+    if nums.len() != 3 {
+        return Err(format!("malformed version: {}", version));
+    }
+
+    let major: u32 = nums[0].parse().map_err(|_| format!("bad major: {}", nums[0]))?;
+    let minor: u32 = nums[1].parse().map_err(|_| format!("bad minor: {}", nums[1]))?;
+    let patch: u32 = nums[2].parse().map_err(|_| format!("bad patch: {}", nums[2]))?;
+    Ok((major, minor, patch))
 }
