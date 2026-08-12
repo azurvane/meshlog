@@ -11,8 +11,8 @@ interface TerminalViewProp {
 }
 
 /**
- * Terminal emulator view component. Spawns an xterm.js instance in the dashboard view, 
- * allowing text execution commands. Supports click-dragging the top header bar to dynamically 
+ * Terminal emulator view component. Spawns an xterm.js instance in the dashboard view,
+ * allowing text execution commands. Supports click-dragging the top header bar to dynamically
  * change the layout height (expanding/collapsing the console space).
  */
 export const TerminalView: React.FC<TerminalViewProp> = ({
@@ -24,6 +24,7 @@ export const TerminalView: React.FC<TerminalViewProp> = ({
   const terminalRef = React.useRef<Terminal | null>(null);
 
   const [height, setHeight] = useState<number>(260);
+  // const [command, SetCommand] = useState<string>("");
   const isDragging = useRef<boolean>(false);
   const startY = useRef<number>(0);
   const startHeight = useRef<number>(0);
@@ -67,7 +68,7 @@ export const TerminalView: React.FC<TerminalViewProp> = ({
     };
   }, []);
 
-  // Constructs the default prompt label (e.g. "username@hostname foldername ~ % ") based on 
+  // Constructs the default prompt label (e.g. "username@hostname foldername ~ % ") based on
   // currently available system parameters. Used to prefix command line execution entries.
   const buildTerminalPrompt = () => {
     if (userName && hostName && folderName) {
@@ -92,13 +93,20 @@ export const TerminalView: React.FC<TerminalViewProp> = ({
     const dataDisposable = terminal.onData((data: string) => {
       const char = data[0];
       if (char === "\r") {
+        // enter
         terminal.write("\r\n");
         inputBuffer = "";
         terminal.write(buildTerminalPrompt());
       } else if (char === "\u007F") {
+        // back space
         if (inputBuffer.length === 0) return;
         inputBuffer = inputBuffer.slice(0, -1);
         terminal.write("\b \b");
+      } else if (char === "\u0003") {
+        // ctrl+c
+        // break the command
+      } else if (char === "clear") {
+        // clear the inputBuffer
       } else {
         inputBuffer += char;
         terminal.write(char);

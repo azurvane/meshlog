@@ -27,3 +27,4 @@ tauri-plugin-dialog = "2"
 tauri-plugin-store = "2.4"
 chrono = { version = "0.4", features = ["clock"] }
 whoami = "2.1.2"
+notify-debouncer-mini = "0.4"
