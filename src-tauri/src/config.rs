@@ -74,3 +74,10 @@ pub struct TableData {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<String>>,
 }
+
+#[derive(Serialize)]
+pub struct RenameCandidate {
+    pub old_path: String,
+    pub new_path: String,
+    pub score: u8,
+}

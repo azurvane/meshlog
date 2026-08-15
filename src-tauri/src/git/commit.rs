@@ -2,6 +2,7 @@ use std::process::Command;
 use std::path::Path;
 
 // add, commit and tag the files
+// call back not working properly improve it 
 #[tauri::command]
 pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, tag: &str, summary: &str, detail: &str)  -> Result<String, String> { 
     let sub_path = Path::new(root_path).join(relative_file_path);

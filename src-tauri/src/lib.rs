@@ -14,6 +14,7 @@ mod git;
 use git::{
     stage_commit_tag, 
     get_uncommited_files,
+    detect_renamed_files,
     get_tag, 
     get_tag_assetid, 
     get_latest_tag_assetid, 
@@ -80,6 +81,7 @@ pub fn run() {
             view_new_asset_id,
             update_db,
             get_uncommited_files,
+            detect_renamed_files,
             get_tag,
             get_tag_assetid,
             get_latest_tag_assetid,
