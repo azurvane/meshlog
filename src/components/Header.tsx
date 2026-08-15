@@ -14,7 +14,7 @@ import { SwitchView } from "./SwitchView";
 import "./Header.css";
 
 interface HeaderProps {
-  onResetWorkspace?: () => void;
+  onSetting: () => void;
   visibleFields: Set<keyof FileMetadata>;
   onToggleField: (key: keyof FileMetadata) => void;
   isTerminalOpen: boolean;
@@ -31,7 +31,7 @@ interface HeaderProps {
  * to toggle sub-windows (metadata column visibility dropdown, embedded shell terminal, inspector layout, or workspace resetting dialogs).
  */
 export const Header: React.FC<HeaderProps> = ({
-  onResetWorkspace,
+  onSetting,
   visibleFields,
   onToggleField,
   isTerminalOpen,
@@ -148,12 +148,12 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => {
             togglePanel("settings");
             if (
-              onResetWorkspace &&
+              onSetting &&
               window.confirm(
                 "Are you sure you want to change your workspace path?"
               )
             ) {
-              onResetWorkspace();
+              onSetting();
             }
           }}
         />

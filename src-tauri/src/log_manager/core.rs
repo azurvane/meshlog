@@ -24,7 +24,7 @@ pub fn populate_log_md(root_path: &str) -> Result<(), String> {
     
     for relative_file_path in commit_files_paths {
         let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
-        populate_log_md_assetid(root_path, &asset_id)?;
+        update_log_md(root_path, &asset_id)?;
     }
     
     Ok(())
@@ -33,7 +33,7 @@ pub fn populate_log_md(root_path: &str) -> Result<(), String> {
 
 // populate log md with all or missing logs for a asset id
 #[tauri::command]
-pub fn populate_log_md_assetid(root_path: &str, asset_id: &str) -> Result<(), String> {
+pub fn update_log_md(root_path: &str, asset_id: &str) -> Result<(), String> {
     let log_file_path = Path::new(root_path)
         .join(LOG_PATH)
         .join(format!("{}.md", asset_id));

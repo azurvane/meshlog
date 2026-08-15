@@ -96,7 +96,7 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
         let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
             let (name, created_at) = crate::file_system::get_filename_createdat(&relative_file_path, root_path)?;
-            let log_path = crate::file_system::get_log_path(&relative_file_path, root_path)?;
+            let log_path = crate::file_system::get_log_path(&asset_id)?;
             asset_ids_missing.push((asset_id, name, relative_file_path, log_path, created_at));
         }
     }

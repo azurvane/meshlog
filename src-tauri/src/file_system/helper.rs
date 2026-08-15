@@ -25,10 +25,8 @@ pub fn get_filename_createdat(relative_file_path: &str, root_path: &str) -> Resu
 }
 
 // get the log path for a specific file
-pub fn get_log_path(relative_file_path: &str, root_path: &str) -> Result<String, String> {
-    let file_name = get_filename_createdat(relative_file_path, root_path)?.0;
-    
-    Ok(format!("{}.md", file_name))
+pub fn get_log_path(asset_id: &str) -> Result<String, String> {
+    Ok(format!("{}.md", asset_id))
 }
 
 // create a md log file
