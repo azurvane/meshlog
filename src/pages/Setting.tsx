@@ -1,27 +1,34 @@
 import { useEffect, useState } from "react";
 import { AppSettings } from "../utils/appSettings.ts";
+import { RenameTable } from "../components/RenameTable.tsx";
 import "../theme/colors.ts";
 import "./Setting.css";
 
 interface SettingProps {
+  rootPath: string;
   onResetPath: () => void;
   onBack: () => void;
 }
 
-export function Setting({ onResetPath, onBack }: SettingProps) {
+export function Setting({ rootPath, onResetPath, onBack }: SettingProps) {
   // Use string | number to gracefully handle empty inputs while typing
   const [similarityThreshold, setSimilarityThreshold] = useState<
     number | string
   >("");
 
-  // Load stored similarity threshold on component mount
+  // Root path of the tracked repo/folder. RenameTable needs this to know
+  // where to run `detect_renamed_files` (and the two placeholder lookups).
+  // NOTE: adjust the "rootPath" key below if your AppSettings store uses a
+  // different key for the tracked folder.
+
+  // Load stored similarity threshold + root path on component mount
   useEffect(() => {
-    const loadStoredThreshold = async () => {
-      const storedVal = await AppSettings.get("similarityThreshold");
-      setSimilarityThreshold(storedVal ?? "");
+    const loadStoredSettings = async () => {
+      const storedThreshold = await AppSettings.get("similarityThreshold");
+      setSimilarityThreshold(storedThreshold ?? "");
     };
 
-    loadStoredThreshold();
+    loadStoredSettings();
   }, []);
 
   // Update local display state on keystroke without saving to disk
@@ -68,7 +75,7 @@ export function Setting({ onResetPath, onBack }: SettingProps) {
         <div className="threshold-controls">
           <div className="input-wrapper">
             <input
-              type="number"
+              type="text"
               min="0"
               max="100"
               value={similarityThreshold}
@@ -90,62 +97,21 @@ export function Setting({ onResetPath, onBack }: SettingProps) {
 
       <hr className="divider" />
 
-      {/* Side-by-Side Tables Placeholder Container */}
-      <section className="tables-container">
-        <div className="table-wrapper">
-          <h4>Table 1 (Placeholder)</h4>
-          <div className="table-placeholder">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Key</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>Sample Item A</td>
-                  <td>Active</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>Sample Item B</td>
-                  <td>Pending</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="table-wrapper">
-          <h4>Table 2 (Placeholder)</h4>
-          <div className="table-placeholder">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Property</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>101</td>
-                  <td>Setting Alpha</td>
-                  <td>Enabled</td>
-                </tr>
-                <tr>
-                  <td>102</td>
-                  <td>Setting Beta</td>
-                  <td>Disabled</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      {/* Renames / unmatched-files table - merges data from
+          detect_renamed_files + the two placeholder lookups.
+          See renameTableData.ts and RenameTable.tsx for details. */}
+      <RenameTable
+        rootPath={rootPath}
+        threshold={
+          typeof similarityThreshold === "number" ? similarityThreshold : 0
+        }
+        onSelectionChange={(selection) => {
+          // Selection = { oldPath, newPath } chosen by the user in the
+          // table. Hook your custom logic here (e.g. manually confirming
+          // a rename link) whenever either value changes.
+          void selection;
+        }}
+      />
     </div>
   );
 }

@@ -10,7 +10,6 @@ interface StampViewProps {
   versionPrefix: string;
   eligibleSet: Set<string>;
   handleGitCommitData: (data: GitCommitData) => Promise<boolean>;
-  handleAssetid: (fileInfo: fileDetails) => Promise<string>;
 }
 
 /**
@@ -24,7 +23,6 @@ export const StampView: React.FC<StampViewProps> = ({
   versionPrefix,
   eligibleSet,
   handleGitCommitData,
-  handleAssetid,
 }) => {
   // ==========================================
   // PLACEHOLDER STATE VARIABLES FOR USER INPUTS
@@ -76,6 +74,30 @@ export const StampView: React.FC<StampViewProps> = ({
     }
   }, [fileInfo, eligibleSet, tag, summaryInput, assetid]);
 
+  const handleAssetid = async (fileInfo: fileDetails): Promise<string> => {
+    try {
+      let filePath = fileInfo.path;
+      let oldFilePath = await invoke<string | null>("get_old_path", {
+        rootPath: rootPath,
+        newRelativeFilePath: filePath,
+      });
+      if (oldFilePath !== null) {
+        filePath = oldFilePath;
+      }
+      const assetid = await invoke<string>("get_assetid_path", {
+        rootPath: rootPath,
+        relativeFilePath: filePath,
+      });
+      return assetid;
+    } catch {
+      const assetid = await invoke<string>("view_new_asset_id", {
+        rootPath: rootPath,
+        filename: fileInfo.name,
+      });
+      return assetid;
+    }
+  };
+
   useEffect(() => {
     async function fetchAssetId() {
       if (!fileInfo.isDir && fileInfo.path) {
@@ -126,36 +148,37 @@ export const StampView: React.FC<StampViewProps> = ({
     };
   }, [width]);
 
+  const fetchPreviousVersion = async () => {
+    if (!fileInfo.path) {
+      SetPreviousVersion("Never tagged");
+      return;
+    }
+    if (fileInfo.isDir) {
+      SetPreviousVersion("Directory");
+      return;
+    }
+    try {
+      const mockPreviousVersion = await invoke<string>(
+        "get_latest_tag_relative_path",
+        {
+          rootPath: rootPath,
+          relativeFilePath: fileInfo.path,
+        }
+      );
+      SetPreviousVersion(mockPreviousVersion);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("No tag")) {
+        SetPreviousVersion("Never tagged"); // Or null, or whatever indicator you prefer
+      } else {
+        console.error("Failed to fetch previous version", error);
+      }
+    }
+  };
+
   // Simulation effect to fetch historical data records
   useEffect(() => {
-    const fetchPreviousVersion = async () => {
-      if (!fileInfo.path) {
-        SetPreviousVersion("Never tagged");
-        return;
-      }
-      if (fileInfo.isDir) {
-        SetPreviousVersion("Directory");
-        return;
-      }
-      try {
-        const mockPreviousVersion = await invoke<string>(
-          "get_latest_tag_relative_path",
-          {
-            rootPath: rootPath,
-            relativeFilePath: fileInfo.path,
-          }
-        );
-        SetPreviousVersion(mockPreviousVersion);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes("No tag")) {
-          SetPreviousVersion("Never tagged"); // Or null, or whatever indicator you prefer
-        } else {
-          console.error("Failed to fetch previous version", error);
-        }
-      }
-    };
     fetchPreviousVersion();
   }, [fileInfo.name, rootPath]);
 
@@ -185,6 +208,7 @@ export const StampView: React.FC<StampViewProps> = ({
         SetVersionInput("");
         SetDetailedMessageInput("");
         SetSummaryInput("");
+        fetchPreviousVersion();
       }
     } catch (error) {
       console.error("Failed to commit the file", error);

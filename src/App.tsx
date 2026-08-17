@@ -73,7 +73,13 @@ function App() {
     return <Setup onPathSelected={handlePathSelected} />;
   } else {
     if (isSetting) {
-      return <Setting onResetPath={handleResetPath} onBack={handleIsSetting} />;
+      return (
+        <Setting
+          rootPath={projectPath}
+          onResetPath={handleResetPath}
+          onBack={handleIsSetting}
+        />
+      );
     } else {
       return <Home filePath={projectPath} onSetting={handleIsSetting} />;
     }

@@ -18,6 +18,7 @@ pub fn get_log_content(root_path: &str, file_name: &str) -> Result<String, Strin
 }
 
 // populate log md for all of the asset id
+// switch to asset_ids list isntead of the paths 
 #[tauri::command]
 pub fn populate_log_md(root_path: &str) -> Result<(), String> {
     let commit_files_paths = crate::git::get_commited_files(root_path)?;

@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use chrono::{DateTime, Local};
 
-use crate::config::CommonMetadata;
+use crate::config::{CommonMetadata, OLD_PATH};
 use crate::config::FileMetadata;
 use crate::config::FileNode;
 
@@ -152,8 +152,15 @@ pub fn get_file_metadata(root_path: &str, absolute_file_path: &str) -> Result<Fi
     
     let common_metadata = get_common_metadata(absolute_file_path)?;
     
+    // first check if the file path exist in the link table or not if not then proceed with new path else update it to old path
+    let mut target_path = relative_file_path_str;
+    let old_path;
+    if let Some(update_path) = crate::database::get_old_path(root_path, relative_file_path_str)? {
+        old_path = update_path;
+        target_path = &old_path;
+    };
     // get asset id with fallback for new/unregistered files
-    let (version, hash) = match crate::database::get_assetid_path(root_path, relative_file_path_str) {
+    let (version, hash) = match crate::database::get_assetid_path(root_path, target_path) {
         Ok(asset_id) => {
             let ver = crate::git::get_latest_tag_assetid(root_path, &asset_id).unwrap_or_else(|_| " - ".to_string());
             let hsh = crate::git::get_hash_assetid(root_path, &ver).unwrap_or_else(|_| " - ".to_string());

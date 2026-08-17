@@ -63,11 +63,38 @@ pub fn get_latest_tag_assetid(root_path: &str, asset_id: &str) -> Result<String,
     }
 }
 
+// get the latest tag for a specific asset id
+pub fn get_first_tag_assetid(root_path: &str, asset_id: &str) -> Result<String, String> {
+    let pattern = format!("{}-v*", asset_id);
+    
+    let output = Command::new("git")
+        .args(["tag", "--list", &pattern, "--sort=creatordate"])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        let tags = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+        let tag = tags.lines().next().map(String::from).ok_or(NO_TAG_ERROR.to_string())?;
+        Ok(tag)
+    } else {
+        let error_text = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+        Err(error_text)
+    }
+}
+
 // get latest tag for a perticular file by relative path
 #[tauri::command]
 pub fn get_latest_tag_relative_path(root_path: &str, relative_file_path: &str) -> Result<String, String> {
+    let mut target_path = relative_file_path;
+    let old_path;
+    if let Some(update_path) = crate::database::get_old_path(root_path, &relative_file_path)? {
+        old_path = update_path;
+        target_path = &old_path;
+    }
+
     let output = Command::new("git")
-        .args(["log", "-n", "1", "--oneline", "--decorate", "--", relative_file_path])
+        .args(["log", "-n", "1", "--oneline", "--decorate", "--", target_path])
         .current_dir(root_path)
         .output()
         .map_err(|e| e.to_string())?;

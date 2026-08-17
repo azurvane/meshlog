@@ -1,12 +1,15 @@
 use rusqlite::Connection;
 use rusqlite::params;
 use std::path::Path;
+use rusqlite::OptionalExtension;
+use rusqlite::types::ValueRef;
 
 // path 
 use crate::config::DB_PATH;
 
-// sql
+// sql tables
 use crate::config::ASSETS_TABLE;
+use crate::config::LINK_TABLE;
 
 // columns for ASSETS_TABLE
 use crate::config::ASSET_ID;
@@ -14,6 +17,10 @@ use crate::config::CURRENT_NAME;
 use crate::config::CURRENT_PATH;
 use crate::config::LOG_PATH_SQL;
 use crate::config::CREATED_AT;
+
+// colums for LINK_TABLE
+use crate::config::NEW_PATH;
+use crate::config::OLD_PATH;
 
 use crate::config::TableData;
 
@@ -66,11 +73,11 @@ pub fn get_table_entries(root_path: &str, table_name: &str) -> Result<TableData,
         .query_map([], |row| {
             (0..row.as_ref().column_count())
                 .map(|i| match row.get_ref(i)? {
-                    rusqlite::types::ValueRef::Null => Ok(String::new()), // or "NULL"
-                    rusqlite::types::ValueRef::Text(t) => String::from_utf8(t.to_vec()).map_err(|_| rusqlite::Error::InvalidQuery),
-                    rusqlite::types::ValueRef::Integer(n) => Ok(n.to_string()),
-                    rusqlite::types::ValueRef::Real(f) => Ok(f.to_string()),
-                    rusqlite::types::ValueRef::Blob(b) => Ok(format!("<BLOB {} B>", b.len())),
+                    ValueRef::Null => Ok(String::new()), // or "NULL"
+                    ValueRef::Text(t) => String::from_utf8(t.to_vec()).map_err(|_| rusqlite::Error::InvalidQuery),
+                    ValueRef::Integer(n) => Ok(n.to_string()),
+                    ValueRef::Real(f) => Ok(f.to_string()),
+                    ValueRef::Blob(b) => Ok(format!("<BLOB {} B>", b.len())),
                 })
                 .collect()
         })
@@ -121,7 +128,8 @@ pub fn update_db(root_path: &str, relative_file_path: &str) -> Result<(), String
     let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;    
 
     let (asset_id, _) = crate::string_formating::get_assetid_version_path(relative_file_path, root_path)?;
-    let (name, created_at) = crate::file_system::get_filename_createdat(relative_file_path, root_path)?;
+    let name = crate::file_system::get_filename(root_path, &relative_file_path)?;
+    let created_at = crate::git::get_first_commit_creation_date(root_path,&asset_id)?;
     let log_path = crate::file_system::get_log_path(&asset_id)?;
 
     let query = format!(
@@ -161,7 +169,7 @@ pub fn populate_db(root_path: &str) -> Result<(), String> {
         let mut values_clauses = Vec::new();
         let mut params: Vec<String> = Vec::new();
         
-        for (i, (asset_id,  name, relative_file_path, log_path, created_at)) in chunk.iter().enumerate() {
+        for (i, asset) in chunk.iter().enumerate() {
             let base_idx = i * 5;
             
             values_clauses.push(format!(
@@ -169,11 +177,11 @@ pub fn populate_db(root_path: &str) -> Result<(), String> {
                 base_idx + 1, base_idx + 2, base_idx + 3, base_idx + 4, base_idx + 5
             ));
             
-            params.push(asset_id.clone());
-            params.push(name.clone());
-            params.push(relative_file_path.clone());
-            params.push(log_path.clone());
-            params.push(created_at.clone());
+            params.push(asset.asset_id.clone());
+            params.push(asset.current_name.clone());
+            params.push(asset.current_path.clone());
+            params.push(asset.log_path.clone());
+            params.push(asset.created_at.clone());
         }
         
         let query = format!(
@@ -208,10 +216,92 @@ pub fn get_assetid_path(root_path: &str, relative_file_path: &str) -> Result<Str
         .into_owned();
     let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
 
-    let query = format!("SELECT asset_id FROM {} WHERE current_path = ?1", ASSETS_TABLE);
+    let query = format!("SELECT {} FROM {} WHERE {} = ?1", ASSET_ID, ASSETS_TABLE, CURRENT_PATH);
     conn.query_row(
         &query, 
         [relative_file_path],
         |row| row.get(0),
     ).map_err(|e| e.to_string())
+}
+
+// update link table 
+#[tauri::command]
+pub fn update_link(root_path: &str, old_relative_file_path: &str, new_relative_file_path: &str) -> Result<(), String> {
+    let db_path = Path::new(root_path).join(DB_PATH);
+    let mut conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    // 1. Remove any stale row currently claiming the new_path
+    let clear_new_path_query = format!("DELETE FROM {} WHERE {} = ?1;", LINK_TABLE, NEW_PATH);
+    tx.execute(&clear_new_path_query, params![new_relative_file_path])
+        .map_err(|e| e.to_string())?;
+
+    // 2. Insert or update the new 1-to-1 link for old_path
+    let upsert_query = format!(
+        "INSERT INTO {} ({}, {}) VALUES (?1, ?2)
+         ON CONFLICT({}) DO UPDATE SET {} = ?2;",
+        LINK_TABLE, OLD_PATH, NEW_PATH, OLD_PATH, NEW_PATH
+    );
+    tx.execute(&upsert_query, params![old_relative_file_path, new_relative_file_path])
+        .map_err(|e| e.to_string())?;
+
+    // 3. Commit the transaction
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// delete a link from the table 
+#[tauri::command]
+pub fn delete_link(root_path: &str, new_relative_file_path: &str) -> Result<(), String> {
+    let db_path = Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
+    
+    let query = format!("DELETE FROM {} WHERE {} = ?1", LINK_TABLE, NEW_PATH);
+    conn.execute(&query, [new_relative_file_path])
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+// get the paths in db which does not exist
+#[tauri::command]
+pub fn get_missing_path(root_path: &str) -> Result<Vec<String>, String> {
+    let root = Path::new(root_path);
+    let db_path = root.join(DB_PATH);
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
+
+    let query = format!("SELECT {} FROM {};", CURRENT_PATH, ASSETS_TABLE);
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+
+    let missing_paths = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(|res| res.ok()) // Ignore SQLite read errors or unwrap them
+        .filter(|rel_path| !root.join(rel_path).exists()) // Keep only if missing on disk
+        .collect();
+    
+    Ok(missing_paths)
+}
+
+// get the old path for assetid from new path
+#[tauri::command]
+pub fn get_old_path(root_path: &str, new_relative_file_path: &str) -> Result<Option<String>, String> {
+    let db_path = Path::new(root_path)
+        .join(DB_PATH)
+        .to_string_lossy()
+        .into_owned();
+    let conn = Connection::open(&db_path).map_err(|e: rusqlite::Error| e.to_string())?;
+
+    let query = format!("SELECT {} FROM {} WHERE {} = ?1", OLD_PATH, LINK_TABLE, NEW_PATH);
+    let old_path: Option<String> = conn
+    .query_row(&query, [new_relative_file_path], |row| row.get(0),)
+    .optional()
+    .map_err(|e| e.to_string())?;
+
+    Ok(old_path)
 }

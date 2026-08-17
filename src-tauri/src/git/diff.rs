@@ -49,9 +49,12 @@ pub fn detect_renamed_files(root_path: &str, threshold: u8) -> Result<Vec<Rename
             let status = split[0];
             let score_str = &status[1..];
             let score = score_str.parse::<u8>().map_err(|e| format!("Failed to parse score: {e}"))?;
+            let old_path = split[1].to_string();
+            let new_path = split[2].to_string();
+            // crate::database::update_link(root_path, &old_path, &new_path)?;
             output_vec.push(RenameCandidate {
-                old_path: split[1].to_string(),
-                new_path: split[2].to_string(),
+                old_path,
+                new_path,
                 score,
             });
         }

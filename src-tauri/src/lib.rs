@@ -14,6 +14,7 @@ mod git;
 use git::{
     stage_commit_tag, 
     get_uncommited_files,
+    get_existing_uncommited_files,
     detect_renamed_files,
     get_tag, 
     get_tag_assetid, 
@@ -41,7 +42,10 @@ use database::{
     view_new_asset_id,
     update_db,
     populate_db,
-    get_assetid_path
+    get_assetid_path,
+    update_link,
+    get_missing_path,
+    get_old_path
 };
 mod log_manager;
 use log_manager::{
@@ -81,6 +85,7 @@ pub fn run() {
             view_new_asset_id,
             update_db,
             get_uncommited_files,
+            get_existing_uncommited_files,
             detect_renamed_files,
             get_tag,
             get_tag_assetid,
@@ -92,6 +97,9 @@ pub fn run() {
             commit_stamp,
             populate_db,
             get_assetid_path,
+            update_link,
+            get_missing_path,
+            get_old_path,
             get_file_metadata,
             get_directory_metadata,
             get_log_content,

@@ -47,6 +47,7 @@ export function Home({ filePath, onSetting }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
+  const [isSettingOpen, SetIsSettingOpen] = useState(false);
   const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
   const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
@@ -66,22 +67,6 @@ export function Home({ filePath, onSetting }: HomeProps) {
       path: path,
       isDir: isDir,
     });
-  };
-
-  const getAssetId = async (fileInfo: fileDetails): Promise<string> => {
-    try {
-      const assetid = await invoke<string>("get_assetid_path", {
-        rootPath: filePath,
-        relativeFilePath: fileInfo.path,
-      });
-      return assetid;
-    } catch {
-      const assetid = await invoke<string>("view_new_asset_id", {
-        rootPath: filePath,
-        filename: fileInfo.name,
-      });
-      return assetid;
-    }
   };
 
   // Toggles the visibility state of columns in the grid view. Adds or removes selected
@@ -310,6 +295,10 @@ export function Home({ filePath, onSetting }: HomeProps) {
     SetIsStampOpen((prev) => !prev);
   };
 
+  const handleToggleSetting = () => {
+    SetIsSettingOpen((prev) => !prev);
+  };
+
   const hanndleActivePanel = async (Panel: PanelView) => {
     SetActiveView(Panel);
   };
@@ -371,6 +360,8 @@ export function Home({ filePath, onSetting }: HomeProps) {
         onToggleTerminal={handleToggleTerminal}
         isStampOpen={isStampOpen}
         onToggleStamp={handleToggleStamp}
+        isSettingOpen={isSettingOpen}
+        onToggleSetting={handleToggleSetting}
         currentView={activeView}
         SetActivePanelView={hanndleActivePanel}
       />
@@ -427,7 +418,6 @@ export function Home({ filePath, onSetting }: HomeProps) {
             versionPrefix=""
             eligibleSet={eligibleSet}
             handleGitCommitData={handleGitCommitData}
-            handleAssetid={getAssetId}
           />
         )}
       </div>

@@ -10,6 +10,7 @@ pub const DB_PATH: &str = ".assets.sqlite";
 pub const COUNTER_ID: i32 = 0;
 pub const ASSETS_TABLE: &str = "assets";
 pub const COUNTER_TABLE: &str = "counters";
+pub const LINK_TABLE: &str = "link";
 
 // columns for ASSETS_TABLE
 pub const ASSET_ID: &str = "asset_id";
@@ -21,6 +22,10 @@ pub const CREATED_AT: &str = "created_at";
 // columns for COUNTER_TABLE
 pub const ID: &str = "id";
 pub const NEXT_ASSET_ID: &str = "next_asset_id";
+
+// columns for LINK_TABLE
+pub const NEW_PATH: &str = "new_path";
+pub const OLD_PATH: &str = "old_path";
 
 // git tag error message
 pub const NO_TAG_ERROR: &str = "No tag";
@@ -67,6 +72,16 @@ pub struct CommitMetadata {
     pub author_date: String,
     pub subject: String,
     pub body: String,
+}
+
+// asset table values
+#[derive(Serialize)]
+pub struct AssetValues {
+    pub asset_id: String,
+    pub current_name: String,
+    pub current_path: String,
+    pub log_path: String,
+    pub created_at: String,
 }
 
 #[derive(Serialize)]
