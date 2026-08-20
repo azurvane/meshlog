@@ -1,12 +1,12 @@
 use std::process::Command;
 
 use crate::config::RenameCandidate;
+use crate::config::RETRY_DELAY;
+use crate::config::MAX_RETRY_ATTEMPTS;
 
 // get the pairs of missing asset and closet match
 #[tauri::command]
 pub fn detect_renamed_files(root_path: &str, threshold: u8) -> Result<Vec<RenameCandidate>, String> {
-    let max_attempts = 100;
-    
     let add_output = Command::new("git")
         .args(["add", "-A"])
         .current_dir(root_path)
@@ -26,7 +26,7 @@ pub fn detect_renamed_files(root_path: &str, threshold: u8) -> Result<Vec<Rename
         .output()
         .map_err(|e| e.to_string());
 
-    loop_git_restore(root_path, max_attempts)?;
+    loop_git_restore(root_path)?;
 
     let diff_output = diff_output?;
     if !diff_output.status.success() {
@@ -51,7 +51,7 @@ pub fn detect_renamed_files(root_path: &str, threshold: u8) -> Result<Vec<Rename
             let score = score_str.parse::<u8>().map_err(|e| format!("Failed to parse score: {e}"))?;
             let old_path = split[1].to_string();
             let new_path = split[2].to_string();
-            // crate::database::update_link(root_path, &old_path, &new_path)?;
+            crate::database::update_link(root_path, &old_path, &new_path)?;
             output_vec.push(RenameCandidate {
                 old_path,
                 new_path,
@@ -63,16 +63,15 @@ pub fn detect_renamed_files(root_path: &str, threshold: u8) -> Result<Vec<Rename
     Ok(output_vec)
 }
 
-fn loop_git_restore(root_path: &str, max_attempts: u32) -> Result<String, String> {
-    let wait_time = 150; // milliseconds
-    for attempt in 1..=max_attempts {
+fn loop_git_restore(root_path: &str) -> Result<String, String> {
+    for attempt in 1..=MAX_RETRY_ATTEMPTS {
         match git_restore(root_path) {
             Ok(value) => return Ok(value),
             Err(err) => {
-                if attempt == max_attempts {
+                if attempt == MAX_RETRY_ATTEMPTS {
                     return Err(format!("cannot undo git add due to: {}", err));
                 }
-                std::thread::sleep(std::time::Duration::from_millis(wait_time));
+                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY));
             }
         }
     }

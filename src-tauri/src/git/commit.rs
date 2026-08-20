@@ -1,8 +1,13 @@
 use std::process::Command;
 use std::path::Path;
+use std::thread;
+use std::time::Duration;
+
+use crate::config::RETRY_DELAY;
+use crate::config::MAX_RETRY_ATTEMPTS;
+const RETRY_CAP:u64 = (MAX_RETRY_ATTEMPTS + 9)/10;
 
 // add, commit and tag the files
-// call back not working properly improve it 
 #[tauri::command]
 pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, tag: &str, summary: &str, detail: &str)  -> Result<String, String> { 
     let sub_path = Path::new(root_path).join(relative_file_path);
@@ -20,6 +25,20 @@ pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, tag: &str, su
         let error_text = String::from_utf8(add_output.stderr).map_err(|e| e.to_string())?;
         return Err(format!("Git add failed: {}", error_text));
     }
+
+    // git rm ghost path if exist
+    if let Some(old_path) = crate::database::get_old_path(root_path, relative_file_path)? {
+        let rm_output = Command::new("git")
+            .args(["rm", "--cached", "--ignore-unmatch", &old_path])
+            .current_dir(root_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+        
+        if !rm_output.status.success() {
+            let output_error = String::from_utf8_lossy(&rm_output.stderr);
+            return Err(format!("Git rm failed: {}", output_error.trim()));
+        }
+    }
     
     // git commit
     let commit_output = Command::new("git")
@@ -30,46 +49,64 @@ pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, tag: &str, su
     
     // Check if commit succeeds
     if !commit_output.status.success() {
-        let error_text = String::from_utf8(commit_output.stderr).map_err(|e| e.to_string())?;
-        return Err(format!("Git commit failed: {}", error_text))
-    }
-    
-    // git tag
-    let tag_output = Command::new("git")
-        .args(["tag", "--"])
-        .arg(tag)
-        .current_dir(root_path)
-        .output()
-        .map_err(|e| e.to_string())?;
-    
-    // Check if commit succeeds
-    if tag_output.status.success() {
-        let text = String::from_utf8(tag_output.stdout).map_err(|e| e.to_string())?;
-        Ok(text)
-    } else {    
-        let tag_error = String::from_utf8_lossy(&tag_output.stderr).into_owned();
-
-        // Roll back the commit if tagging failed.
+        let commit_error = String::from_utf8_lossy(&commit_output.stderr);
         let rollback_output = Command::new("git")
-            .args(["reset", "--soft", "HEAD~1"])
+            .args(["restore", "--staged", "."])
             .current_dir(root_path)
             .output()
             .map_err(|e| e.to_string())?;
-
+        
         if !rollback_output.status.success() {
-            let rollback_error =
-                String::from_utf8_lossy(&rollback_output.stderr).into_owned();
+            let rollback_error = String::from_utf8_lossy(&rollback_output.stderr);
             return Err(format!(
-                "Git tag failed: {}\nRollback failed: {}",
-                tag_error, rollback_error
+                "Git commit failed: {}\nRollback failed: {}",
+                commit_error.trim(),
+                rollback_error.trim()
             ));
         }
-
-        Err(format!(
-            "Git tag failed: {}. Commit was rolled back.",
-            tag_error
-        ))
+        return Err(format!("Git commit failed: {}", commit_error.trim()));
     }
+    
+    let mut last_tag_error = String::new();
+    for attempt in 0..RETRY_CAP {
+        // git tag
+        let tag_output = Command::new("git")
+            .args(["tag", "--"])
+            .arg(tag)
+            .current_dir(root_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+        
+        // Check if commit succeeds
+        if tag_output.status.success() {
+            let text = String::from_utf8(tag_output.stdout).map_err(|e| e.to_string())?;
+            return Ok(text);
+        }
+        last_tag_error = String::from_utf8_lossy(&tag_output.stderr).trim().to_string();
+        if attempt + 1 < RETRY_CAP {
+            thread::sleep(Duration::from_millis(RETRY_DELAY));
+        }
+    }
+
+    // Roll back the commit if tagging failed.
+    let rollback_output = Command::new("git")
+        .args(["reset", "--soft", "HEAD~1"])
+        .current_dir(root_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !rollback_output.status.success() {
+        let rollback_error = String::from_utf8_lossy(&rollback_output.stderr).into_owned();
+        return Err(format!(
+            "Git tag failed: {}\nRollback failed: {}",
+            last_tag_error, rollback_error.trim()
+        ));
+    }
+
+    Err(format!(
+        "Git tag failed: {}. Commit was rolled back.",
+        last_tag_error
+    ))
 }
 
 // get new or uncommit modified files

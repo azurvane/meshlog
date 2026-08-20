@@ -219,14 +219,18 @@ export const StampView: React.FC<StampViewProps> = ({
     const requestId = ++latestRequestId.current; // this call claims the newest ticket
     try {
       const tag = await invoke<string>("stamp_version", {
-        assetid,
+        assetId: assetid,
         version: currentVersion,
       });
-      if (requestId === latestRequestId.current) {
-        // only apply if still the newest
-        SetIsValidVersion(false);
-        SetTag(tag);
-      }
+      const tag_list = await invoke<string[]>("get_tag_assetid", {
+        rootPath: rootPath,
+        assetId: assetid,
+      });
+      if (requestId !== latestRequestId.current) return;
+
+      const isDuplicate = tag_list.includes(tag);
+      SetIsValidVersion(isDuplicate);
+      SetTag(isDuplicate ? "" : tag);
     } catch {
       if (requestId === latestRequestId.current) {
         SetIsValidVersion(true);

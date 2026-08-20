@@ -31,6 +31,10 @@ pub const OLD_PATH: &str = "old_path";
 pub const NO_TAG_ERROR: &str = "No tag";
 pub const NO_COMMIT_METADATA: &str = "No commit metadata found";
 
+// constant values 
+pub const MAX_RETRY_ATTEMPTS: u64 = 100;
+pub const RETRY_DELAY: u64 = 150; // millisecnods
+
 // file node data structure 
 #[derive(Serialize)]
 pub struct FileNode {

@@ -21,9 +21,9 @@ pub fn get_tag(root_path: &str) -> Result<Vec<String>, String> {
     }
 }
 
-// get tag for a specific asset id
+// get all tag for a specific asset id
 #[tauri::command]
-pub fn get_tag_assetid(asset_id: &str, root_path: &str) -> Result<Vec<String>, String> {
+pub fn get_tag_assetid(root_path: &str, asset_id: &str) -> Result<Vec<String>, String> {
     let pattern = format!("{}-v*", asset_id);
     
     let output = Command::new("git")
@@ -63,7 +63,7 @@ pub fn get_latest_tag_assetid(root_path: &str, asset_id: &str) -> Result<String,
     }
 }
 
-// get the latest tag for a specific asset id
+// get the earliest/first tag for a specific asset id
 pub fn get_first_tag_assetid(root_path: &str, asset_id: &str) -> Result<String, String> {
     let pattern = format!("{}-v*", asset_id);
     

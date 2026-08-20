@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use chrono::{DateTime, Local};
 
-use crate::config::{CommonMetadata, OLD_PATH};
+use crate::config::CommonMetadata;
 use crate::config::FileMetadata;
 use crate::config::FileNode;
 

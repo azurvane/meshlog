@@ -60,19 +60,3 @@ pub fn get_commited_files(root_path: &str) -> Result<Vec<String>, String> {
         Err(error_text)
     }
 }
-
-// delete ghost path
-pub fn delete_ghost_path(root_path: &str, old_relative_path: &str) -> Result<(), String> {
-    let output = Command::new("git")
-        .args(["rm", "--cached", old_relative_path])
-        .current_dir(root_path)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    if !output.status.success() {
-        let error_text = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("git rm failed: {}", error_text.trim()));
-    }
-
-    Ok(())
-}

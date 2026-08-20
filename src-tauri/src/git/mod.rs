@@ -23,4 +23,3 @@ pub use tag::get_latest_tag_relative_path;
 
 pub use helper::get_commit_metadata;
 pub use helper::get_commited_files;
-pub use helper::delete_ghost_path;

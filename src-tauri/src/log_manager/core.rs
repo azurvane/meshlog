@@ -38,7 +38,7 @@ pub fn update_log_md(root_path: &str, asset_id: &str) -> Result<(), String> {
     let log_file_path = Path::new(root_path)
         .join(LOG_PATH)
         .join(format!("{}.md", asset_id));
-    let tags = crate::get_tag_assetid(asset_id, root_path)?;
+    let tags = crate::get_tag_assetid(root_path, asset_id)?;
     
     if !Path::new(&log_file_path).exists() {
         crate::file_system::create_log_md(&log_file_path)?;
