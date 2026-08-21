@@ -18,13 +18,14 @@ pub fn get_log_content(root_path: &str, file_name: &str) -> Result<String, Strin
 }
 
 // populate log md for all of the asset id
+// switch to asset_ids list isntead of the paths 
 #[tauri::command]
 pub fn populate_log_md(root_path: &str) -> Result<(), String> {
     let commit_files_paths = crate::git::get_commited_files(root_path)?;
     
     for relative_file_path in commit_files_paths {
-        let (asset_id, _) = crate::string_formating::get_assetid_version(&relative_file_path, root_path)?;
-        populate_log_md_assetid(root_path, &asset_id)?;
+        let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
+        update_log_md(root_path, &asset_id)?;
     }
     
     Ok(())
@@ -33,17 +34,17 @@ pub fn populate_log_md(root_path: &str) -> Result<(), String> {
 
 // populate log md with all or missing logs for a asset id
 #[tauri::command]
-pub fn populate_log_md_assetid(root_path: &str, asset_id: &str) -> Result<(), String> {
+pub fn update_log_md(root_path: &str, asset_id: &str) -> Result<(), String> {
     let log_file_path = Path::new(root_path)
         .join(LOG_PATH)
         .join(format!("{}.md", asset_id));
-    let tags = crate::get_tag_assetid(asset_id, root_path)?;
+    let tags = crate::get_tag_assetid(root_path, asset_id)?;
     
     if !Path::new(&log_file_path).exists() {
         crate::file_system::create_log_md(&log_file_path)?;
         for tag in &tags {
             let commit_metadata = crate::git::get_commit_metadata(root_path, &tag)?;
-            let version = crate::string_formating::get_version(&tag)?;
+            let (_, version) = crate::string_formating::get_assetid_version_tag(&tag)?;
             let format_metadata = crate::string_formating::format_commit_metadata(commit_metadata, &version);
             crate::file_system::append_log_md(&log_file_path, &format_metadata)?;
         }

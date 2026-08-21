@@ -1,0 +1,99 @@
+.rename-table-wrapper {
+  background-color: var(--color-bgCard);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.rename-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rename-table-header h4 {
+  margin: 0;
+  color: var(--color-textMuted);
+}
+
+.rename-table-error {
+  color: var(--color-accentYellow);
+  font-size: 0.85rem;
+  margin: 0 0 12px 0;
+}
+
+/* Base table look, moved here from Setting.css */
+.table-placeholder {
+  overflow-x: auto;
+}
+
+.table-placeholder table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table-placeholder th {
+  background-color: var(--color-bgFooter);
+  color: var(--color-textMuted);
+  padding: 10px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.table-placeholder td {
+  padding: 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-textBright);
+  font-size: 0.9rem;
+}
+
+.table-placeholder tr:last-child td {
+  border-bottom: none;
+}
+
+.rename-table-empty {
+  text-align: center;
+  color: var(--color-textMuted);
+}
+
+/* Cells that represent a real path (not "—") are clickable for selection. */
+.selectable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.selectable:hover {
+  background-color: var(--color-bgFooter);
+}
+
+.selectable.selected {
+  background-color: var(--color-accentCyan);
+  color: var(--color-textDark);
+  font-weight: 600;
+}
+
+.rename-table-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  color: var(--color-textMuted);
+}
+
+.rename-table-selection strong {
+  color: var(--color-accentCyan);
+}
+
+@media (max-width: 768px) {
+  .rename-table-selection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

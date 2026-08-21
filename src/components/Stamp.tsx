@@ -5,11 +5,11 @@ import { GitCommitData, fileDetails } from "../utils/viewFields";
 import "./Stamp.css";
 
 interface StampViewProps {
+  rootPath: string;
   fileInfo: fileDetails;
   versionPrefix: string;
   eligibleSet: Set<string>;
   handleGitCommitData: (data: GitCommitData) => Promise<boolean>;
-  handleAssetid: (fileInfo: fileDetails) => Promise<string>;
 }
 
 /**
@@ -18,29 +18,29 @@ interface StampViewProps {
  * Uses flex layout adjustments to scale all child fields cleanly without empty black gaps.
  */
 export const StampView: React.FC<StampViewProps> = ({
+  rootPath,
   fileInfo,
   versionPrefix,
   eligibleSet,
   handleGitCommitData,
-  handleAssetid,
 }) => {
   // ==========================================
   // PLACEHOLDER STATE VARIABLES FOR USER INPUTS
   // ==========================================
-  const [versionInput, setVersionInput] = useState<string>("");
-  const [summaryInput, setSummaryInput] = useState<string>("");
-  const [detailedMessageInput, setDetailedMessageInput] = useState<string>("");
+  const [versionInput, SetVersionInput] = useState<string>("");
+  const [summaryInput, SetSummaryInput] = useState<string>("");
+  const [detailedMessageInput, SetDetailedMessageInput] = useState<string>("");
   const [tag, SetTag] = useState<string>("");
 
   // ==========================================
   // PLACEHOLDER STATE FOR FETCHED DATA
   // ==========================================
-  const [previousVersion, setPreviousVersion] = useState<string>("");
+  const [previousVersion, SetPreviousVersion] = useState<string>("");
   const [isValidVersion, SetIsValidVersion] = useState<boolean>(false);
   const [canSubmit, SetCanSubmit] = useState<boolean>(false);
 
   // DRAG RESIZING STATES (Default width mimics standard miller columns: 320px)
-  const [width, setWidth] = useState<number>(320);
+  const [width, SetWidth] = useState<number>(320);
   const isDragging = useRef<boolean>(false);
   const startX = useRef<number>(0);
   const startWidth = useRef<number>(0);
@@ -74,8 +74,32 @@ export const StampView: React.FC<StampViewProps> = ({
     }
   }, [fileInfo, eligibleSet, tag, summaryInput, assetid]);
 
+  const handleAssetid = async (fileInfo: fileDetails): Promise<string> => {
+    try {
+      let filePath = fileInfo.path;
+      let oldFilePath = await invoke<string | null>("get_old_path", {
+        rootPath: rootPath,
+        newRelativeFilePath: filePath,
+      });
+      if (oldFilePath !== null) {
+        filePath = oldFilePath;
+      }
+      const assetid = await invoke<string>("get_assetid_path", {
+        rootPath: rootPath,
+        relativeFilePath: filePath,
+      });
+      return assetid;
+    } catch {
+      const assetid = await invoke<string>("view_new_asset_id", {
+        rootPath: rootPath,
+        filename: fileInfo.name,
+      });
+      return assetid;
+    }
+  };
+
   useEffect(() => {
-    async function fetchAsset() {
+    async function fetchAssetId() {
       if (!fileInfo.isDir && fileInfo.path) {
         try {
           const id = await handleAssetid(fileInfo);
@@ -84,9 +108,16 @@ export const StampView: React.FC<StampViewProps> = ({
           console.error("Failed to resolve asset id for", fileInfo.path, err);
           SetAssetid(""); // empty, not a fake placeholder — see point 4
         }
+      } else if (fileInfo.isDir && fileInfo.path) {
+        try {
+          SetAssetid("Directory");
+        } catch (err) {
+          console.error("Failed to resolve asset id for", fileInfo.path, err);
+          SetAssetid(""); // empty, not a fake placeholder — see point 4
+        }
       }
     }
-    fetchAsset();
+    fetchAssetId();
   }, [fileInfo]);
 
   // Listens to global mouse events to scale the column width relative to the right edge window constraint
@@ -99,7 +130,7 @@ export const StampView: React.FC<StampViewProps> = ({
         260,
         Math.min(800, startWidth.current + deltaX)
       );
-      setWidth(newWidth);
+      SetWidth(newWidth);
     };
 
     const handleMouseUp = () => {
@@ -117,18 +148,39 @@ export const StampView: React.FC<StampViewProps> = ({
     };
   }, [width]);
 
-  // Simulation effect to fetch historical data records
-  useEffect(() => {
-    const fetchPreviousVersion = async () => {
-      try {
-        const mockPreviousVersion = "v4.0";
-        setPreviousVersion(mockPreviousVersion);
-      } catch (error) {
+  const fetchPreviousVersion = async () => {
+    if (!fileInfo.path) {
+      SetPreviousVersion("Never tagged");
+      return;
+    }
+    if (fileInfo.isDir) {
+      SetPreviousVersion("Directory");
+      return;
+    }
+    try {
+      const mockPreviousVersion = await invoke<string>(
+        "get_latest_tag_relative_path",
+        {
+          rootPath: rootPath,
+          relativeFilePath: fileInfo.path,
+        }
+      );
+      SetPreviousVersion(mockPreviousVersion);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("No tag")) {
+        SetPreviousVersion("Never tagged"); // Or null, or whatever indicator you prefer
+      } else {
         console.error("Failed to fetch previous version", error);
       }
-    };
+    }
+  };
+
+  // Simulation effect to fetch historical data records
+  useEffect(() => {
     fetchPreviousVersion();
-  }, [fileInfo.name]);
+  }, [fileInfo.name, rootPath]);
 
   const handleCommitUpdate = async () => {
     try {
@@ -153,9 +205,10 @@ export const StampView: React.FC<StampViewProps> = ({
       // reset evey value
       if (succeeded) {
         SetTag("");
-        setVersionInput("");
-        setDetailedMessageInput("");
-        setSummaryInput("");
+        SetVersionInput("");
+        SetDetailedMessageInput("");
+        SetSummaryInput("");
+        fetchPreviousVersion();
       }
     } catch (error) {
       console.error("Failed to commit the file", error);
@@ -166,14 +219,18 @@ export const StampView: React.FC<StampViewProps> = ({
     const requestId = ++latestRequestId.current; // this call claims the newest ticket
     try {
       const tag = await invoke<string>("stamp_version", {
-        assetid,
+        assetId: assetid,
         version: currentVersion,
       });
-      if (requestId === latestRequestId.current) {
-        // only apply if still the newest
-        SetIsValidVersion(false);
-        SetTag(tag);
-      }
+      const tag_list = await invoke<string[]>("get_tag_assetid", {
+        rootPath: rootPath,
+        assetId: assetid,
+      });
+      if (requestId !== latestRequestId.current) return;
+
+      const isDuplicate = tag_list.includes(tag);
+      SetIsValidVersion(isDuplicate);
+      SetTag(isDuplicate ? "" : tag);
     } catch {
       if (requestId === latestRequestId.current) {
         SetIsValidVersion(true);
@@ -224,14 +281,16 @@ export const StampView: React.FC<StampViewProps> = ({
                 : "2px solid transparent",
             }}
           >
-            <span className="stamp-version-prefix-block">{assetid + "-v"}</span>
+            <span className="stamp-version-prefix-block">
+              {fileInfo.isDir ? assetid : assetid + "-v"}
+            </span>
             <input
               type="text"
               className="stamp-form-input stamp-version-field"
-              placeholder="xx.xx.xxxx"
+              placeholder="x.x.xxxx"
               value={versionInput}
               onChange={async (e) => {
-                setVersionInput(e.target.value);
+                SetVersionInput(e.target.value);
                 handleInvalidVersion(e.target.value);
               }}
             />
@@ -252,7 +311,7 @@ export const StampView: React.FC<StampViewProps> = ({
             className="stamp-form-input"
             placeholder="Warmed midtones and cleaned pore detail"
             value={summaryInput}
-            onChange={(e) => setSummaryInput(e.target.value)}
+            onChange={(e) => SetSummaryInput(e.target.value)}
           />
         </div>
 
@@ -263,7 +322,7 @@ export const StampView: React.FC<StampViewProps> = ({
             className="stamp-form-textarea stamp-flexible-textarea"
             placeholder="- Describe your specific updates here"
             value={detailedMessageInput}
-            onChange={(e) => setDetailedMessageInput(e.target.value)}
+            onChange={(e) => SetDetailedMessageInput(e.target.value)}
           />
         </div>
       </div>

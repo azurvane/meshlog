@@ -5,14 +5,20 @@ const store = new LazyStore("settings.json");
 
 // Define your hardcoded default values here
 const DEFAULTS: Record<string, any> = {
-  projectPath: "",
+  rootFolderPath: "",
+  similarityThreshold: 90,
 };
 
 export const AppSettings = {
+  // Get default value without exposing DEFAULTS directly
+  getDefault(key: string): any {
+    return DEFAULTS[key];
+  },
+
   // Get a value (returns default if not set yet)
   async get(key: string): Promise<any> {
     const value = await store.get(key);
-    return value !== null ? value : DEFAULTS[key];
+    return value ?? DEFAULTS[key];
   },
 
   // Save a value permanently

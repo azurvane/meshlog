@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   FileMetadata,
   DEFAULT_VISIBLE,
@@ -29,7 +30,7 @@ interface VisibleFolder {
 
 interface HomeProps {
   filePath: string;
-  onResetPath: () => void;
+  onSetting: () => void;
 }
 
 /**
@@ -37,7 +38,7 @@ interface HomeProps {
  * handles communication with the backend Rust API to initialize projects and retrieve
  * file listings, manages custom file metadata fields, and displays the command line terminal drawer.
  */
-export function Home({ filePath, onResetPath }: HomeProps) {
+export function Home({ filePath, onSetting }: HomeProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [activePathIndices, setActivePathIndices] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -46,6 +47,7 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   const [hostname, setHostname] = useState<string | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
+  const [isSettingOpen, SetIsSettingOpen] = useState(false);
   const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
   const [metadataMap, SetMetadataMap] = useState<
     Map<string, Map<string, FileMetadata>>
@@ -65,22 +67,6 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       path: path,
       isDir: isDir,
     });
-  };
-
-  const getAssetId = async (fileInfo: fileDetails): Promise<string> => {
-    try {
-      const assetid = await invoke<string>("get_assetid_path", {
-        rootPath: filePath,
-        relativeFilePath: fileInfo.path,
-      });
-      return assetid;
-    } catch {
-      const assetid = await invoke<string>("view_new_asset_id", {
-        rootPath: filePath,
-        filename: fileInfo.name,
-      });
-      return assetid;
-    }
   };
 
   // Toggles the visibility state of columns in the grid view. Adds or removes selected
@@ -114,9 +100,35 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       const list: string[] = await invoke("get_uncommited_files", {
         rootPath: filePath,
       });
-      setEligibleSet(new Set(list));
+      const allEligiblePaths = new Set<string>();
+      list.forEach((filePathStr) => {
+        allEligiblePaths.add(filePathStr);
+        const parts = filePathStr.split("/");
+        let currentPath = "";
+        for (let i = 0; i < parts.length - 1; i++) {
+          currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+          allEligiblePaths.add(currentPath);
+        }
+      });
+      setEligibleSet(allEligiblePaths);
     } catch (err) {
       console.error("Failed to refresh eligible set:", err);
+    }
+  };
+
+  const loadFileTree = async () => {
+    try {
+      const tree: FileNode[] = await invoke("get_file_tree", {
+        absoluteFolderPath: filePath,
+      });
+
+      setTreeData(tree);
+      setActivePathIndices([]);
+
+      handleEligibleSet();
+      await fetchMetadataForNodes(tree, filePath);
+    } catch (err: any) {
+      setError(err.toString());
     }
   };
 
@@ -132,16 +144,8 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         await invoke("initialize_project", { rootPath: filePath });
         await invoke("populate_db", { rootPath: filePath });
         await invoke("populate_log_md", { rootPath: filePath });
-
-        const tree: FileNode[] = await invoke("get_file_tree", {
-          absoluteFolderPath: filePath,
-        });
-
-        setTreeData(tree);
-        setActivePathIndices([]);
-
-        handleEligibleSet();
-        await fetchMetadataForNodes(tree, filePath);
+        await invoke("start_watching", { rootPath: filePath });
+        await loadFileTree();
       } catch (err: any) {
         setError(err.toString());
       } finally {
@@ -149,6 +153,22 @@ export function Home({ filePath, onResetPath }: HomeProps) {
       }
     }
     loadProject();
+
+    return () => {
+      invoke("stop_watching").catch((err) =>
+        console.error("Failed to stop watcher:", err)
+      );
+    };
+  }, [filePath]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<string>("fs-changed", () => {
+      loadFileTree();
+    });
+
+    return () => {
+      unlistenPromise.then((unlistenFn) => unlistenFn());
+    };
   }, [filePath]);
 
   function diff(oldList: string[], newList: string[]) {
@@ -219,8 +239,21 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         const absolutePath = `${basePath}/${node.name}`;
         try {
           const meta = await invoke<FileMetadata>("get_file_metadata", {
-            absoluteFilePath: absolutePath,
             rootPath: filePath,
+            absoluteFilePath: absolutePath,
+          });
+          if (!results.has(basePath)) {
+            results.set(basePath, new Map());
+          }
+          results.get(basePath)!.set(node.name, meta);
+        } catch (err) {
+          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
+        }
+      } else {
+        const absolutePath = `${basePath}/${node.name}`;
+        try {
+          const meta = await invoke<FileMetadata>("get_directory_metadata", {
+            absoluteFilePath: absolutePath,
           });
           if (!results.has(basePath)) {
             results.set(basePath, new Map());
@@ -262,20 +295,28 @@ export function Home({ filePath, onResetPath }: HomeProps) {
     SetIsStampOpen((prev) => !prev);
   };
 
+  const handleToggleSetting = () => {
+    SetIsSettingOpen((prev) => !prev);
+  };
+
   const hanndleActivePanel = async (Panel: PanelView) => {
     SetActiveView(Panel);
   };
 
   const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
     try {
-      if (eligibleSet.has(data.path)) {
+      const oldPath = await invoke<string | null>("get_old_path", {
+        rootPath: filePath,
+        newRelativeFilePath: data.path,
+      });
+      if (eligibleSet.has(data.path) && !oldPath) {
         await invoke<string>("get_new_asset_id", {
           rootPath: filePath,
           filename: data.name,
         });
       }
 
-      await invoke<FileMetadata>("stage_commit_tag", {
+      await invoke<FileMetadata>("commit_stamp", {
         rootPath: filePath,
         relativeFilePath: data.path,
         tag: data.tag,
@@ -283,18 +324,6 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         detail: data.detail,
       });
       handleEligibleSet();
-
-      const assetId = data.tag.split("-v")[0];
-
-      // update log md and db
-      await invoke("populate_log_md_assetid", {
-        rootPath: filePath,
-        assetId: assetId,
-      });
-      await invoke("update_db", {
-        rootPath: filePath,
-        relativeFilePath: data.path,
-      });
 
       return true;
     } catch (err) {
@@ -328,13 +357,15 @@ export function Home({ filePath, onResetPath }: HomeProps) {
   return (
     <div className="home-layout">
       <Header
-        onResetWorkspace={onResetPath}
+        onSetting={onSetting}
         visibleFields={activeFields}
         onToggleField={toggleActiveFields}
         isTerminalOpen={isTerminalOpen}
         onToggleTerminal={handleToggleTerminal}
         isStampOpen={isStampOpen}
         onToggleStamp={handleToggleStamp}
+        isSettingOpen={isSettingOpen}
+        onToggleSetting={handleToggleSetting}
         currentView={activeView}
         SetActivePanelView={hanndleActivePanel}
       />
@@ -386,11 +417,11 @@ export function Home({ filePath, onResetPath }: HomeProps) {
         {/* Draggable Stamp column sidebar rendering on the far right */}
         {isStampOpen && (
           <StampView
+            rootPath={filePath}
             fileInfo={fileInfo}
             versionPrefix=""
             eligibleSet={eligibleSet}
             handleGitCommitData={handleGitCommitData}
-            handleAssetid={getAssetId}
           />
         )}
       </div>

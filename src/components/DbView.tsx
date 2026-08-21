@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
 import { TableData } from "../utils/viewFields";
 import "./DbView.css";
@@ -27,42 +28,61 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
     setSelectedRow(null);
   }
 
-  useEffect(() => {
-    async function loadList() {
-      try {
-        const fetchedFiles = await invoke<string[]>("get_table_name", {
-          rootPath,
-        });
-        const sorted = [...fetchedFiles].sort((a, b) => a.localeCompare(b));
-        setFiles(sorted);
-      } catch (err) {
-        console.error("Failed to list tables:", err);
-      }
+  const loadList = async () => {
+    try {
+      const fetchedFiles = await invoke<string[]>("get_table_name", {
+        rootPath,
+      });
+      const sorted = [...fetchedFiles].sort((a, b) => a.localeCompare(b));
+      setFiles(sorted);
+    } catch (err) {
+      console.error("Failed to list tables:", err);
     }
+  };
+
+  useEffect(() => {
     loadList();
   }, [rootPath]);
 
-  useEffect(() => {
+  const loadContent = async () => {
     if (!selected) return;
-    async function loadContent() {
-      setIsLoading(true);
-      setSelectedRow(null);
-      setSelectedCol(null);
-      try {
-        const entries = await invoke<TableData>("get_table_entries", {
-          rootPath,
-          tableName: selected,
-        });
-        setContent(entries);
-      } catch (err) {
-        console.error("Failed to read table:", err);
-        setContent(null);
-      } finally {
-        setIsLoading(false);
-      }
+
+    setIsLoading(true);
+    setSelectedRow(null);
+    setSelectedCol(null);
+    try {
+      const entries = await invoke<TableData>("get_table_entries", {
+        rootPath,
+        tableName: selected,
+      });
+      setContent(entries);
+    } catch (err) {
+      console.error("Failed to read table:", err);
+      setContent(null);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadContent();
   }, [selected, rootPath]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<string>("fs-changed", (event) => {
+      const changedSubdir = event.payload;
+      const isRootChange = changedSubdir === "";
+
+      if (isRootChange) {
+        loadList();
+        loadContent();
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlistenFn) => unlistenFn());
+    };
+  }, [rootPath, selected]);
 
   const handleSelectFile = async (selectedFileName: string) => {
     setSelected(selectedFileName);

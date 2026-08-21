@@ -1,10 +1,10 @@
 
 // wrapper function for stamp adds the assetid
 #[tauri::command]
-pub fn stamp_version(assetid: &str, version: &str) -> Result<String, String>{
-    let (_, _, _) = crate::log_manager::parse_version_tuple(version)?;
+pub fn stamp_version(asset_id: &str, version: &str) -> Result<String, String>{
+    let (_, _, _) = crate::string_formating::parse_version_tuple(version)?;
     
-    Ok(format!("{}-v{}", assetid, version))
+    Ok(format!("{}-v{}", asset_id, version))
 }
 
 // wrapper function for terminal checks if valid assetid or 

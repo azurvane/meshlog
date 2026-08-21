@@ -69,3 +69,42 @@ export const DEFAULT_VISIBLE: Set<keyof FileMetadata> = new Set(
         .filter(f => f.locked || ["current_version", "modified_ddmmyyyy", "size_bytes"].includes(f.key))
         .map(f => f.key)
 );
+
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+ 
+/**
+ * Mirrors the Rust struct `RenameCandidate` returned by `detect_renamed_files`
+ * in diff.rs (old_path: String, new_path: String, score: u8).
+ */
+export interface RenameCandidate {
+    old_path: string;
+    new_path: string;
+    score: number;
+  }
+   
+  /**
+   * Where a given table row came from. Kept on the row so the UI (or any
+   * future logic) can style/filter rows differently per source without
+   * re-deriving it from oldPath/newPath being null.
+   */
+  export type RenameRowSource = "renamed" | "missing-asset" | "untracked-file";
+   
+  /**
+   * A single normalized row for the table. This is the ONLY shape the UI
+   * component needs to know about - it doesn't care which of the 3 functions
+   * a row originally came from beyond the `source` tag.
+   */
+  export interface RenameTableRow {
+    /** Stable unique key for React lists + selection tracking. */
+    id: string;
+    /** null when this row has no old path (came from fetchUnmatchedFiles). */
+    oldPath: string | null;
+    /** null when this row has no new path (came from fetchMissingAssets). */
+    newPath: string | null;
+    /** NaN when the source function doesn't provide a score. */
+    score: number;
+    source: RenameRowSource;
+  }
