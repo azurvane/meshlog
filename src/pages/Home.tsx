@@ -305,7 +305,11 @@ export function Home({ filePath, onSetting }: HomeProps) {
 
   const handleGitCommitData = async (data: GitCommitData): Promise<boolean> => {
     try {
-      if (eligibleSet.has(data.path)) {
+      const oldPath = await invoke<string | null>("get_old_path", {
+        rootPath: filePath,
+        newRelativeFilePath: data.path,
+      });
+      if (eligibleSet.has(data.path) && !oldPath) {
         await invoke<string>("get_new_asset_id", {
           rootPath: filePath,
           filename: data.name,

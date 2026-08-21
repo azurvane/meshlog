@@ -24,20 +24,9 @@ export function RenameTable({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // The two independently-selectable values. Each can be picked from any
-  // row, so they are tracked separately rather than as "the selected row".
   const [selectedOldPath, setSelectedOldPath] = useState<string | null>(null);
   const [selectedNewPath, setSelectedNewPath] = useState<string | null>(null);
 
-  // ---------------------------------------------------------------------------
-  // 1) REAL data source - already implemented on the Rust side (diff.rs)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Calls the real `detect_renamed_files` Tauri command.
-   * Tauri auto-converts the snake_case Rust arg names (root_path) to
-   * camelCase on the JS side (rootPath), so the keys below must stay camelCase.
-   */
   const fetchRenamedPairs = async (
     rootPath: string,
     threshold: number
@@ -48,46 +37,14 @@ export function RenameTable({
     });
   };
 
-  // ---------------------------------------------------------------------------
-  // 2) PLACEHOLDER - old-path-only source
-  // ---------------------------------------------------------------------------
-
-  /**
-   * PLACEHOLDER. Should eventually return the list of old paths (assets known
-   * to the DB) that could NOT be matched to any file on disk.
-   *
-   * Rename this function + its backend command to whatever fits your domain
-   * once it exists - nothing else needs to change as long as it keeps
-   * returning `string[]`.
-   */
   const fetchMissingAssets = async (rootPath: string): Promise<string[]> => {
     return invoke<string[]>("get_missing_path", { rootPath });
   };
 
-  // ---------------------------------------------------------------------------
-  // 3) PLACEHOLDER - new-path-only source
-  // ---------------------------------------------------------------------------
-
-  /**
-   * PLACEHOLDER. Should eventually return the list of new paths (files found
-   * on disk) that aren't linked to any known asset yet.
-   */
   const fetchUnmatchedFiles = async (rootPath: string): Promise<string[]> => {
     return invoke<string[]>("get_existing_uncommited_files", { rootPath });
   };
 
-  // ---------------------------------------------------------------------------
-  // Merge logic
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Combines the outputs of the 3 fetch functions above into one flat list
-   * of rows the table can render directly.
-   *
-   * - `renamed` entries keep their real score.
-   * - `missingAssets` entries become rows with newPath = null, score = NaN.
-   * - `untrackedFiles` entries become rows with oldPath = null, score = NaN.
-   */
   const buildRenameTableRows = (
     renamed: RenameCandidate[],
     missingAssets: string[],
@@ -202,6 +159,20 @@ export function RenameTable({
     }
   };
 
+  const unlinkPath = async () => {
+    try {
+      if (!selectedNewPath) return;
+      await invoke("delete_link", {
+        rootPath: rootPath,
+        newRelativeFilePath: selectedNewPath,
+      });
+      setSelectedOldPath(null);
+      setSelectedNewPath(null);
+    } catch (err) {
+      console.error("error unlinking file: ", err);
+    }
+  };
+
   const clearSelection = async () => {
     setSelectedOldPath(null);
     setSelectedNewPath(null);
@@ -289,6 +260,9 @@ export function RenameTable({
         </button>
         <button className="btn btn-secondary" onClick={changePairs}>
           Manual Overwrite
+        </button>
+        <button className="btn btn-secondary" onClick={unlinkPath}>
+          unlink asset
         </button>
       </div>
     </section>

@@ -44,6 +44,7 @@ use database::{
     populate_db,
     get_assetid_path,
     update_link,
+    delete_link,
     get_missing_path,
     get_old_path
 };
@@ -98,6 +99,7 @@ pub fn run() {
             populate_db,
             get_assetid_path,
             update_link,
+            delete_link,
             get_missing_path,
             get_old_path,
             get_file_metadata,
