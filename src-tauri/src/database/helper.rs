@@ -17,6 +17,9 @@ use crate::config::ASSET_ID;
 use crate::config::ID;
 use crate::config::NEXT_ASSET_ID;
 
+// datatypes
+use crate::config::AssetValues;
+
 // get the counter value and Atomically reads/increments/writes the next_asset_id counter
 pub fn increment_and_get_counter(conn: &mut Connection) -> Result<i32, String> {
     // Start an exclusive SQLite transaction to prevent race conditions
@@ -71,7 +74,7 @@ pub fn sanitize_name(filename: &str) -> String {
 }
 
 // Identifies committed Git assets that have not yet been registered in the database.
-pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, String, String, String,)>, String> {
+pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<AssetValues>, String> {
     let db_path = Path::new(root_path)
         .join(DB_PATH)
         .to_string_lossy()
@@ -95,9 +98,16 @@ pub fn get_missing_db_assets(root_path: &str) -> Result<Vec<(String, String, Str
     for relative_file_path in commit_files_paths {
         let (asset_id, _) = crate::string_formating::get_assetid_version_path(&relative_file_path, root_path)?;
         if !asset_ids_db.contains(&asset_id) {
-            let (name, created_at) = crate::file_system::get_filename_createdat(&relative_file_path, root_path)?;
-            let log_path = crate::file_system::get_log_path(&relative_file_path, root_path)?;
-            asset_ids_missing.push((asset_id, name, relative_file_path, log_path, created_at));
+            let name = crate::file_system::get_filename(root_path, &relative_file_path)?;
+            let created_at = crate::git::get_first_commit_creation_date(root_path,&asset_id)?;
+            let log_path = crate::file_system::get_log_path(&asset_id)?;
+            asset_ids_missing.push(AssetValues{
+                asset_id: asset_id, 
+                current_name: name, 
+                current_path: relative_file_path, 
+                log_path: log_path, 
+                created_at: created_at
+            });
         }
     }
     

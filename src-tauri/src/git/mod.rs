@@ -1,10 +1,15 @@
 pub mod commit;
+pub mod diff;
 pub mod hash;
 pub mod tag;
 pub mod helper;
 
 pub use commit::stage_commit_tag;
 pub use commit::get_uncommited_files;
+pub use commit::get_existing_uncommited_files;
+pub use commit::get_first_commit_creation_date;
+
+pub use diff::detect_renamed_files;
 
 pub use hash::get_all_hash_assetid;
 pub use hash::get_latest_hash_assetid;

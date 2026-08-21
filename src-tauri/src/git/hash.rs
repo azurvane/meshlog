@@ -3,7 +3,7 @@ use std::process::Command;
 // get all the hash for a specific asset id
 #[tauri::command]
 pub fn get_all_hash_assetid(root_path: &str, asset_id: &str) -> Result<Vec<String>, String> {
-    let tags = super::tag::get_tag_assetid(asset_id, root_path)?;
+    let tags = super::tag::get_tag_assetid(root_path, asset_id)?;
     let mut hashes = Vec::new();
     
     for tag in &tags {

@@ -10,6 +10,7 @@ pub const DB_PATH: &str = ".assets.sqlite";
 pub const COUNTER_ID: i32 = 0;
 pub const ASSETS_TABLE: &str = "assets";
 pub const COUNTER_TABLE: &str = "counters";
+pub const LINK_TABLE: &str = "link";
 
 // columns for ASSETS_TABLE
 pub const ASSET_ID: &str = "asset_id";
@@ -22,9 +23,17 @@ pub const CREATED_AT: &str = "created_at";
 pub const ID: &str = "id";
 pub const NEXT_ASSET_ID: &str = "next_asset_id";
 
+// columns for LINK_TABLE
+pub const NEW_PATH: &str = "new_path";
+pub const OLD_PATH: &str = "old_path";
+
 // git tag error message
 pub const NO_TAG_ERROR: &str = "No tag";
 pub const NO_COMMIT_METADATA: &str = "No commit metadata found";
+
+// constant values 
+pub const MAX_RETRY_ATTEMPTS: u64 = 100;
+pub const RETRY_DELAY: u64 = 150; // millisecnods
 
 // file node data structure 
 #[derive(Serialize)]
@@ -69,8 +78,25 @@ pub struct CommitMetadata {
     pub body: String,
 }
 
+// asset table values
+#[derive(Serialize)]
+pub struct AssetValues {
+    pub asset_id: String,
+    pub current_name: String,
+    pub current_path: String,
+    pub log_path: String,
+    pub created_at: String,
+}
+
 #[derive(Serialize)]
 pub struct TableData {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<String>>,
+}
+
+#[derive(Serialize)]
+pub struct RenameCandidate {
+    pub old_path: String,
+    pub new_path: String,
+    pub score: u8,
 }

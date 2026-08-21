@@ -14,13 +14,15 @@ import { SwitchView } from "./SwitchView";
 import "./Header.css";
 
 interface HeaderProps {
-  onResetWorkspace?: () => void;
+  onSetting: () => void;
   visibleFields: Set<keyof FileMetadata>;
   onToggleField: (key: keyof FileMetadata) => void;
   isTerminalOpen: boolean;
   isStampOpen: boolean;
+  isSettingOpen: boolean;
   onToggleTerminal: () => void;
   onToggleStamp: () => void;
+  onToggleSetting: () => void;
   currentView: PanelView;
   SetActivePanelView: (Panel: PanelView) => void;
 }
@@ -31,30 +33,18 @@ interface HeaderProps {
  * to toggle sub-windows (metadata column visibility dropdown, embedded shell terminal, inspector layout, or workspace resetting dialogs).
  */
 export const Header: React.FC<HeaderProps> = ({
-  onResetWorkspace,
+  onSetting,
   visibleFields,
   onToggleField,
   isTerminalOpen,
   onToggleTerminal,
   isStampOpen,
   onToggleStamp,
+  isSettingOpen,
+  onToggleSetting,
   currentView,
   SetActivePanelView,
 }) => {
-  // Track open/close state transitions for dashboard panels (such as the asset metadata details inspector drawer).
-  const [panels, setPanels] = useState({
-    terminal: false,
-    inspector: false,
-    settings: false,
-  });
-
-  const togglePanel = (key: keyof typeof panels) => {
-    setPanels((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
   const [isMenuOpen, SetIsMenuOpen] = useState(false);
   const [isSwitchViewOpen, SetIsSwitchViewOpen] = useState(false);
 
@@ -144,17 +134,10 @@ export const Header: React.FC<HeaderProps> = ({
         />
         <ActionButton
           icon={<Settings size={18} />}
-          isActive={panels.settings}
+          isActive={isSettingOpen}
           onClick={() => {
-            togglePanel("settings");
-            if (
-              onResetWorkspace &&
-              window.confirm(
-                "Are you sure you want to change your workspace path?"
-              )
-            ) {
-              onResetWorkspace();
-            }
+            onToggleSetting();
+            onSetting();
           }}
         />
         <div className="user-avatar">MR</div>
