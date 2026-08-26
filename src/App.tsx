@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Setup } from "./pages/Setup";
 import { Home } from "./pages/Home";
 import { Setting } from "./pages/Setting";
 import { AppSettings } from "./utils/appSettings";
+import { TerminalView } from "./components/Terminal";
 import "./App.css";
 
 /**
@@ -15,6 +17,9 @@ function App() {
   const [projectPath, setProjectPath] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSetting, setIsSetting] = useState<boolean>(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [hostname, setHostname] = useState<string | null>(null);
 
   // On application mount, load the user's previously saved project path from local configuration file.
   // This avoids prompting the user for workspace folder selection on every launch.
@@ -39,6 +44,21 @@ function App() {
     loadSettings();
   }, []);
 
+  // Query backend Rust shell services to retrieve local OS username and hostname information.
+  // This metadata is used to build a realistic prompt label (e.g. user@host ~ %) inside the terminal.
+  useEffect(() => {
+    async function fetchUserInfo() {
+      try {
+        const [user, host] = await invoke<[string, string]>("get_user_info");
+        setUserName(user);
+        setHostname(host);
+      } catch (err: any) {
+        console.error("Failed to fetch user info:", err);
+      }
+    }
+    fetchUserInfo();
+  }, []);
+
   // Callback invoked when the user selects a valid workspace directory. Updates the React state
   // to render the main interface and persists the path to disk settings for future sessions.
   const handlePathSelected = async (path: string) => {
@@ -59,12 +79,33 @@ function App() {
     setIsSetting((prev) => !prev);
   };
 
+  const handleToggleTerminal = () => {
+    setIsTerminalOpen((prev) => !prev);
+  };
+
   if (isLoading) {
     // Basic un-styled text to verify if the loader itself is breaking
     return (
       <div style={{ color: "white", padding: "20px", textAlign: "center" }}>
         Loading workspace settings...
       </div>
+    );
+  }
+
+  let terminalElement: React.ReactNode = null;
+
+  if (userName === null || hostname === null) {
+    console.error(
+      "[Inspect Error] Terminal DOM instantiation skipped: Required parameters are null.",
+      { userName, hostname }
+    );
+  } else {
+    terminalElement = (
+      <TerminalView
+        userName={userName}
+        hostName={hostname}
+        folderName={projectPath.split("/").pop()}
+      />
     );
   }
 
@@ -81,7 +122,15 @@ function App() {
         />
       );
     } else {
-      return <Home filePath={projectPath} onSetting={handleIsSetting} />;
+      return (
+        <Home
+          filePath={projectPath}
+          onSetting={handleIsSetting}
+          isTerminalOpen={isTerminalOpen}
+          handleToggleTerminal={handleToggleTerminal}
+          TerminalDOM={terminalElement}
+        />
+      );
     }
   }
 }

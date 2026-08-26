@@ -9,13 +9,14 @@ import {
   PanelView,
 } from "../utils/viewFields";
 import { Header } from "../components/Header";
-import { TerminalView } from "../components/Terminal";
 import { StampView } from "../components/Stamp";
 import { MillerColumns } from "../components/MillerColumns";
 import { LogView } from "../components/LogView.tsx";
 import { DbView } from "../components/DbView.tsx";
 import "../theme/colors.ts";
 import "./Home.css";
+
+// get the dom from app.tsx instead of creating it here
 
 interface FileNode {
   name: string;
@@ -31,6 +32,9 @@ interface VisibleFolder {
 interface HomeProps {
   filePath: string;
   onSetting: () => void;
+  isTerminalOpen: boolean;
+  handleToggleTerminal: () => void;
+  TerminalDOM?: React.ReactNode;
 }
 
 /**
@@ -38,14 +42,17 @@ interface HomeProps {
  * handles communication with the backend Rust API to initialize projects and retrieve
  * file listings, manages custom file metadata fields, and displays the command line terminal drawer.
  */
-export function Home({ filePath, onSetting }: HomeProps) {
+export function Home({
+  filePath,
+  onSetting,
+  isTerminalOpen,
+  handleToggleTerminal,
+  TerminalDOM,
+}: HomeProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [activePathIndices, setActivePathIndices] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [hostname, setHostname] = useState<string | null>(null);
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isStampOpen, SetIsStampOpen] = useState(false);
   const [isSettingOpen, SetIsSettingOpen] = useState(false);
   const [activeView, SetActiveView] = useState<PanelView>(PanelView.Repository);
@@ -79,21 +86,6 @@ export function Home({ filePath, onSetting }: HomeProps) {
       return next;
     });
   };
-
-  // Query backend Rust shell services to retrieve local OS username and hostname information.
-  // This metadata is used to build a realistic prompt label (e.g. user@host ~ %) inside the terminal.
-  useEffect(() => {
-    async function fetchUserInfo() {
-      try {
-        const [user, host] = await invoke<[string, string]>("get_user_info");
-        setUserName(user);
-        setHostname(host);
-      } catch (err: any) {
-        console.error("Failed to fetch user info:", err);
-      }
-    }
-    fetchUserInfo();
-  }, []);
 
   const handleEligibleSet = async () => {
     try {
@@ -287,10 +279,6 @@ export function Home({ filePath, onSetting }: HomeProps) {
     setActivePathIndices(indices);
   };
 
-  const handleToggleTerminal = () => {
-    setIsTerminalOpen((prev) => !prev);
-  };
-
   const handleToggleStamp = () => {
     SetIsStampOpen((prev) => !prev);
   };
@@ -405,13 +393,9 @@ export function Home({ filePath, onSetting }: HomeProps) {
           </main>
 
           {/* Terminal renders directly below the main content viewport */}
-          {isTerminalOpen && userName && hostname && (
-            <TerminalView
-              userName={userName}
-              hostName={hostname}
-              folderName={filePath.split("/").pop()}
-            />
-          )}
+          <div className={isTerminalOpen ? "visible" : "hidden"}>
+            {TerminalDOM}
+          </div>
         </div>
 
         {/* Draggable Stamp column sidebar rendering on the far right */}
