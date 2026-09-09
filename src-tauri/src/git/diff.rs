@@ -1,4 +1,6 @@
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use crate::config::RenameCandidate;
 use crate::config::RETRY_DELAY;
@@ -71,7 +73,7 @@ fn loop_git_restore(root_path: &str) -> Result<String, String> {
                 if attempt == MAX_RETRY_ATTEMPTS {
                     return Err(format!("cannot undo git add due to: {}", err));
                 }
-                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY));
+                thread::sleep(Duration::from_millis(RETRY_DELAY));
             }
         }
     }

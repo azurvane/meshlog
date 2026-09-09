@@ -32,23 +32,9 @@ interface VisibleFolder {
 interface HomeProps {
   filePath: string;
   onSetting: () => void;
-  isTerminalOpen: boolean;
-  handleToggleTerminal: () => void;
-  TerminalDOM?: React.ReactNode;
 }
 
-/**
- * Main workspace dashboard component. It coordinates directory browser navigation,
- * handles communication with the backend Rust API to initialize projects and retrieve
- * file listings, manages custom file metadata fields, and displays the command line terminal drawer.
- */
-export function Home({
-  filePath,
-  onSetting,
-  isTerminalOpen,
-  handleToggleTerminal,
-  TerminalDOM,
-}: HomeProps) {
+export function Home({ filePath, onSetting }: HomeProps) {
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [activePathIndices, setActivePathIndices] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -348,8 +334,6 @@ export function Home({
         onSetting={onSetting}
         visibleFields={activeFields}
         onToggleField={toggleActiveFields}
-        isTerminalOpen={isTerminalOpen}
-        onToggleTerminal={handleToggleTerminal}
         isStampOpen={isStampOpen}
         onToggleStamp={handleToggleStamp}
         isSettingOpen={isSettingOpen}
@@ -360,7 +344,6 @@ export function Home({
 
       {/* Main core layout zone split into workspace panels and the right Stamp sidebar */}
       <div className="workspace-container">
-        {/* Left block containing the Miller Columns viewport on top and Terminal directly underneath */}
         <div className="left-workspace-stack">
           <main className="content-viewport">
             {loading && (
@@ -391,11 +374,6 @@ export function Home({
               <DbView rootPath={filePath} />
             )}
           </main>
-
-          {/* Terminal renders directly below the main content viewport */}
-          <div className={isTerminalOpen ? "visible" : "hidden"}>
-            {TerminalDOM}
-          </div>
         </div>
 
         {/* Draggable Stamp column sidebar rendering on the far right */}
