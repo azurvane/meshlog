@@ -120,15 +120,15 @@ fn verify_database_state(root_path: &str, conn: &Connection) -> Result<(), Strin
     }
     
     // 2. Check if 'LINK_TABLE' table exists
-    let assets_query = format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}';", LINK_TABLE);
-    let assets_exists: i64 = conn.query_row(&assets_query, [], |row| row.get(0)).map_err(|e| e.to_string())?;
+    let link_query = format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}';", LINK_TABLE);
+    let link_exists: i64 = conn.query_row(&link_query, [], |row| row.get(0)).map_err(|e| e.to_string())?;
     
-    if assets_exists == 0 {
+    if link_exists == 0 {
         println!("'{}' table missing! Initialising...", LINK_TABLE);
         initialise_link_tables(conn)?;
     }
     
-    // 2. Check if 'COUNTER_TABLE' table exists
+    // 3. Check if 'COUNTER_TABLE' table exists
     let counters_query = format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}';", COUNTER_TABLE);
     let counters_exists: i64 = conn.query_row(&counters_query, [], |row| row.get(0)).map_err(|e| e.to_string())?;
     

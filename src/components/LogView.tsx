@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -16,7 +16,7 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const loadList = async () => {
+  const loadList = useCallback(async () => {
     try {
       const fetchedFiles = await invoke<string[]>("get_log_files", {
         rootPath,
@@ -26,9 +26,9 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
     } catch (err) {
       console.error("Failed to list logs:", err);
     }
-  };
+  }, [rootPath]);
 
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     if (!selected) return;
     setIsLoading(true);
     try {
@@ -43,18 +43,20 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [rootPath, selected]);
 
   useEffect(() => {
     loadList();
-  }, [rootPath]);
+  }, [loadList]);
 
   useEffect(() => {
     loadContent();
-  }, [selected, rootPath]);
+  }, [loadContent]);
 
   useEffect(() => {
+    let isMounted = true;
     const unlistenPromise = listen<string>("fs-changed", (event) => {
+      if (!isMounted) return;
       const changedSubdir = event.payload;
       const isLogsChange =
         changedSubdir === ".logs" || changedSubdir.startsWith(".logs/");
@@ -66,9 +68,10 @@ export const LogView: React.FC<LogViewProp> = ({ rootPath }) => {
     });
 
     return () => {
+      isMounted = false;
       unlistenPromise.then((unlistenFn) => unlistenFn());
     };
-  }, [rootPath, selected]);
+  }, [loadList, loadContent]);
 
   const handleSelectFile = async (selectedFileName: string) => {
     setSelected(selectedFileName);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -73,7 +73,7 @@ export function Home({ filePath, onSetting }: HomeProps) {
     });
   };
 
-  const handleEligibleSet = async () => {
+  const handleEligibleSet = useCallback(async () => {
     try {
       const list: string[] = await invoke("get_uncommited_files", {
         rootPath: filePath,
@@ -92,9 +92,61 @@ export function Home({ filePath, onSetting }: HomeProps) {
     } catch (err) {
       console.error("Failed to refresh eligible set:", err);
     }
-  };
+  }, [filePath]);
 
-  const loadFileTree = async () => {
+  // Iterates through list nodes, making asynchronous requests to the database backend for file parameters.
+  // Merges new metadata values into the local React state map to update visible table values.
+  const fetchMetadataForNodes = useCallback(async (nodes: FileNode[], basePath: string) => {
+    const results = new Map<string, Map<string, FileMetadata>>();
+
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (!node.is_dir) {
+        const absolutePath = `${basePath}/${node.name}`;
+        try {
+          const meta = await invoke<FileMetadata>("get_file_metadata", {
+            rootPath: filePath,
+            absoluteFilePath: absolutePath,
+          });
+          if (!results.has(basePath)) {
+            results.set(basePath, new Map());
+          }
+          results.get(basePath)!.set(node.name, meta);
+        } catch (err) {
+          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
+        }
+      } else {
+        const absolutePath = `${basePath}/${node.name}`;
+        try {
+          const meta = await invoke<FileMetadata>("get_directory_metadata", {
+            absoluteFilePath: absolutePath,
+          });
+          if (!results.has(basePath)) {
+            results.set(basePath, new Map());
+          }
+          results.get(basePath)!.set(node.name, meta);
+        } catch (err) {
+          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
+        }
+      }
+    }
+    SetMetadataMap((prevMap) => {
+      const nextOuterMap = new Map(prevMap);
+      for (const [currentPath, incomingFileMetadata] of results) {
+        const existingInnerMap = prevMap.get(currentPath);
+        const nextInnerMap = existingInnerMap
+          ? new Map(existingInnerMap)
+          : new Map();
+        for (const [fileName, metadata] of incomingFileMetadata) {
+          nextInnerMap.set(fileName, metadata);
+        }
+        nextOuterMap.set(currentPath, nextInnerMap);
+      }
+      return nextOuterMap;
+    });
+  }, [filePath]);
+
+  const loadFileTree = useCallback(async () => {
     try {
       const tree: FileNode[] = await invoke("get_file_tree", {
         absoluteFolderPath: filePath,
@@ -103,16 +155,17 @@ export function Home({ filePath, onSetting }: HomeProps) {
       setTreeData(tree);
       setActivePathIndices([]);
 
-      handleEligibleSet();
+      await handleEligibleSet();
       await fetchMetadataForNodes(tree, filePath);
     } catch (err: any) {
       setError(err.toString());
     }
-  };
+  }, [filePath, handleEligibleSet, fetchMetadataForNodes]);
 
   // Trigger project workspace setup on path changes. Instructs the backend database manager
   // to sync files, fetch directory listings, and initially cache metadata parameters for all root files.
   useEffect(() => {
+    let isMounted = true;
     async function loadProject() {
       if (!filePath) return;
       try {
@@ -123,31 +176,42 @@ export function Home({ filePath, onSetting }: HomeProps) {
         await invoke("populate_db", { rootPath: filePath });
         await invoke("populate_log_md", { rootPath: filePath });
         await invoke("start_watching", { rootPath: filePath });
-        await loadFileTree();
+        if (isMounted) {
+          await loadFileTree();
+        }
       } catch (err: any) {
-        setError(err.toString());
+        if (isMounted) {
+          setError(err.toString());
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     loadProject();
 
     return () => {
+      isMounted = false;
       invoke("stop_watching").catch((err) =>
         console.error("Failed to stop watcher:", err)
       );
     };
-  }, [filePath]);
+  }, [filePath, loadFileTree]);
 
   useEffect(() => {
+    let isMounted = true;
     const unlistenPromise = listen<string>("fs-changed", () => {
-      loadFileTree();
+      if (isMounted) {
+        loadFileTree();
+      }
     });
 
     return () => {
+      isMounted = false;
       unlistenPromise.then((unlistenFn) => unlistenFn());
     };
-  }, [filePath]);
+  }, [loadFileTree]);
 
   function diff(oldList: string[], newList: string[]) {
     const oldSet = new Set(oldList);
@@ -204,59 +268,9 @@ export function Home({ filePath, onSetting }: HomeProps) {
       previousFoldersRef.current = currentPaths;
     }
     useVisibleFolderSync(activePathIndices, treeData);
-  }, [activePathIndices, treeData]);
+  }, [activePathIndices, treeData, fetchMetadataForNodes]);
 
-  // Iterates through list nodes, making asynchronous requests to the database backend for file parameters.
-  // Merges new metadata values into the local React state map to update visible table values.
-  const fetchMetadataForNodes = async (nodes: FileNode[], basePath: string) => {
-    const results = new Map<string, Map<string, FileMetadata>>();
 
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (!node.is_dir) {
-        const absolutePath = `${basePath}/${node.name}`;
-        try {
-          const meta = await invoke<FileMetadata>("get_file_metadata", {
-            rootPath: filePath,
-            absoluteFilePath: absolutePath,
-          });
-          if (!results.has(basePath)) {
-            results.set(basePath, new Map());
-          }
-          results.get(basePath)!.set(node.name, meta);
-        } catch (err) {
-          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
-        }
-      } else {
-        const absolutePath = `${basePath}/${node.name}`;
-        try {
-          const meta = await invoke<FileMetadata>("get_directory_metadata", {
-            absoluteFilePath: absolutePath,
-          });
-          if (!results.has(basePath)) {
-            results.set(basePath, new Map());
-          }
-          results.get(basePath)!.set(node.name, meta);
-        } catch (err) {
-          console.error(`Metadata fetch failed for ${absolutePath}:`, err);
-        }
-      }
-    }
-    SetMetadataMap((prevMap) => {
-      const nextOuterMap = new Map(prevMap);
-      for (const [currentPath, incomingFileMetadata] of results) {
-        const existingInnerMap = prevMap.get(currentPath);
-        const nextInnerMap = existingInnerMap
-          ? new Map(existingInnerMap)
-          : new Map();
-        for (const [fileName, metadata] of incomingFileMetadata) {
-          nextInnerMap.set(fileName, metadata);
-        }
-        nextOuterMap.set(currentPath, nextInnerMap);
-      }
-      return nextOuterMap;
-    });
-  };
 
   // Callback triggered when a user clicks a row in the Miller columns directory layout.
   // Updates selected indexes, crawls nested paths, fetches folder children metadata,

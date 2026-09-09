@@ -57,17 +57,14 @@ export const StampView: React.FC<StampViewProps> = ({
   };
 
   useEffect(() => {
-    const handleCanSubmit = () => {
-      SetCanSubmit(
-        !fileInfo.isDir &&
-          eligibleSet.has(fileInfo.path) &&
-          tag !== "" &&
-          summaryInput.trim() !== "" &&
-          assetid !== ""
-      );
-    };
-    handleCanSubmit();
-    if (canSubmit) {
+    const nextCanSubmit =
+      !fileInfo.isDir &&
+      eligibleSet.has(fileInfo.path) &&
+      tag !== "" &&
+      summaryInput.trim() !== "" &&
+      assetid !== "";
+    SetCanSubmit(nextCanSubmit);
+    if (nextCanSubmit) {
       console.log("commit button open");
     } else {
       console.log("commit button blocked");
@@ -146,7 +143,7 @@ export const StampView: React.FC<StampViewProps> = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [width]);
+  }, []);
 
   const fetchPreviousVersion = async () => {
     if (!fileInfo.path) {
@@ -180,7 +177,7 @@ export const StampView: React.FC<StampViewProps> = ({
   // Simulation effect to fetch historical data records
   useEffect(() => {
     fetchPreviousVersion();
-  }, [fileInfo.name, rootPath]);
+  }, [fileInfo.name, fileInfo.path, rootPath]);
 
   const handleCommitUpdate = async () => {
     try {

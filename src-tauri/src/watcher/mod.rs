@@ -48,7 +48,7 @@ pub fn start_watching(
         .watch(Path::new(&root_path), RecursiveMode::Recursive)
         .map_err(|e| e.to_string())?;
     
-    let mut guard = state.lock().unwrap();
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
     *guard = Some(debouncer);
     
     Ok(())
@@ -58,7 +58,7 @@ pub fn start_watching(
 // stoping the watcher 
 #[tauri::command]
 pub fn stop_watching(state: State<WatcherState>) -> Result<(), String> {
-    let mut guard = state.lock().unwrap();
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
     *guard = None;
     Ok(())
 

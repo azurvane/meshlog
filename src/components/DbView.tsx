@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogColumn, MIN_PREVIEW_WIDTH } from "./LogColumn";
@@ -28,7 +28,7 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
     setSelectedRow(null);
   }
 
-  const loadList = async () => {
+  const loadList = useCallback(async () => {
     try {
       const fetchedFiles = await invoke<string[]>("get_table_name", {
         rootPath,
@@ -38,13 +38,13 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
     } catch (err) {
       console.error("Failed to list tables:", err);
     }
-  };
+  }, [rootPath]);
 
   useEffect(() => {
     loadList();
-  }, [rootPath]);
+  }, [loadList]);
 
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     if (!selected) return;
 
     setIsLoading(true);
@@ -62,14 +62,16 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [rootPath, selected]);
 
   useEffect(() => {
     loadContent();
-  }, [selected, rootPath]);
+  }, [loadContent]);
 
   useEffect(() => {
+    let isMounted = true;
     const unlistenPromise = listen<string>("fs-changed", (event) => {
+      if (!isMounted) return;
       const changedSubdir = event.payload;
       const isRootChange = changedSubdir === "";
 
@@ -80,9 +82,10 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
     });
 
     return () => {
+      isMounted = false;
       unlistenPromise.then((unlistenFn) => unlistenFn());
     };
-  }, [rootPath, selected]);
+  }, [loadList, loadContent]);
 
   const handleSelectFile = async (selectedFileName: string) => {
     setSelected(selectedFileName);
@@ -129,18 +132,18 @@ export const DbView: React.FC<DbViewProp> = ({ rootPath }) => {
                   <tbody>
                     {content.rows.map((row, rowIndex) => (
                       <tr
-                        key={rowIndex}
+                        key={row[0] !== undefined && row[0] !== null ? String(row[0]) : rowIndex}
                         onClick={() => handleRowClick(rowIndex)}
                         className={
                           selectedRow === rowIndex ? "is-selected" : ""
                         }
                       >
                         {row.map((cell, colIndex) => {
-                          const colName = content.columns[colIndex];
+                          const colName = content.columns[colIndex] || colIndex;
                           const isColSelected = selectedCol === colName;
                           return (
                             <td
-                              key={colIndex}
+                              key={colName}
                               className={isColSelected ? "is-col-selected" : ""}
                             >
                               {cell ?? ""}
