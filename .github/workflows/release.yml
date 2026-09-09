@@ -18,21 +18,31 @@ jobs:
           - platform: macos-latest
             os-name: macos-arm64
             args: "--target aarch64-apple-darwin"
+            target-dir: "aarch64-apple-darwin"
+            binary-ext: ""
 
           # 2. Intel Mac
           - platform: macos-latest
             os-name: macos-intel
             args: "--target x86_64-apple-darwin"
+            target-dir: "x86_64-apple-darwin"
+            binary-ext: ""
 
           # 3. Linux (Ubuntu/Debian-based)
           - platform: ubuntu-latest
             os-name: linux-amd64
             args: ""
+            target-dir: ""
+            binary-ext: ""
 
     runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Extract Tag Version
+        id: vars
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -64,12 +74,29 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      # Upload artifacts so they are always downloadable from the Actions UI
+      # Stages standalone executable binaries with versioned names
+      - name: Prepare Versioned Binaries
+        shell: bash
+        run: |
+          mkdir -p dist-binaries
+
+          if [ -n "${{ matrix.target-dir }}" ]; then
+            BIN_PATH="src-tauri/target/${{ matrix.target-dir }}/release/meshlog${{ matrix.binary-ext }}"
+          else
+            BIN_PATH="src-tauri/target/release/meshlog${{ matrix.binary-ext }}"
+          fi
+
+          if [ -f "$BIN_PATH" ]; then
+            cp "$BIN_PATH" "dist-binaries/meshlog-${{ github.ref_name }}-${{ matrix.os-name }}${{ matrix.binary-ext }}"
+          fi
+
+      # Uploads both OS installers and raw versioned executable binaries
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: meshlog-${{ matrix.os-name }}
+          name: meshlog-${{ github.ref_name }}-${{ matrix.os-name }}
           path: |
+            dist-binaries/*
             src-tauri/target/release/bundle/dmg/*.dmg
             src-tauri/target/release/bundle/macos/*.app
             src-tauri/target/release/bundle/appimage/*.AppImage

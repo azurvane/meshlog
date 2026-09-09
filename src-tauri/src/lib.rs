@@ -8,8 +8,6 @@ use notify_debouncer_mini::{
 
 mod initialize;
 use initialize::initialize_project;
-mod system;
-use system::get_user_info;
 mod git;
 use git::{
     stage_commit_tag, 
@@ -46,7 +44,7 @@ use database::{
     update_link,
     delete_link,
     get_missing_path,
-    get_old_path
+    get_old_path,
 };
 mod log_manager;
 use log_manager::{
@@ -61,7 +59,7 @@ use string_formating::{
 mod watcher;
 use watcher::{
     start_watching,
-    stop_watching
+    stop_watching,
 };
 
 mod config;
@@ -74,7 +72,6 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .manage(Mutex::new(None::<Debouncer<RecommendedWatcher>>))
         .invoke_handler(tauri::generate_handler![
-            get_user_info,
             initialize_project,
             get_log_files,
             get_file_flat,
@@ -109,7 +106,7 @@ pub fn run() {
             update_log_md,
             stamp_version,
             start_watching,
-            stop_watching
+            stop_watching,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

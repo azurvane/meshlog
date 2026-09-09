@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import {
   SlidersHorizontal,
   PanelRightOpen,
-  Terminal,
   Settings,
   ChevronDown,
 } from "lucide-react";
@@ -17,27 +16,18 @@ interface HeaderProps {
   onSetting: () => void;
   visibleFields: Set<keyof FileMetadata>;
   onToggleField: (key: keyof FileMetadata) => void;
-  isTerminalOpen: boolean;
   isStampOpen: boolean;
   isSettingOpen: boolean;
-  onToggleTerminal: () => void;
   onToggleStamp: () => void;
   onToggleSetting: () => void;
   currentView: PanelView;
   SetActivePanelView: (Panel: PanelView) => void;
 }
 
-/**
- * Top application header bar component. It renders the project navigation context (branding logotype,
- * directory hierarchy badges), an interactive global asset/hash lookup input bar, and buttons
- * to toggle sub-windows (metadata column visibility dropdown, embedded shell terminal, inspector layout, or workspace resetting dialogs).
- */
 export const Header: React.FC<HeaderProps> = ({
   onSetting,
   visibleFields,
   onToggleField,
-  isTerminalOpen,
-  onToggleTerminal,
   isStampOpen,
   onToggleStamp,
   isSettingOpen,
@@ -120,12 +110,6 @@ export const Header: React.FC<HeaderProps> = ({
             <ViewMenu visibleFields={visibleFields} onToggle={onToggleField} />
           )}
         </div>
-        <ActionButton
-          label="Terminal"
-          icon={<Terminal size={18} />}
-          isActive={isTerminalOpen}
-          onClick={onToggleTerminal}
-        />
         <ActionButton
           label="Stamp"
           icon={<PanelRightOpen size={18} />}
