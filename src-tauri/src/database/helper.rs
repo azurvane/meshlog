@@ -120,16 +120,27 @@ pub fn get_counter_value(root_path: &str) -> Result<i32, String> {
     let mut counters = HashSet::new();
     
     for tag in tags {
-        let (asset_id, _) = crate::string_formating::get_assetid_version_tag(&tag)?;
+        let (asset_id, _) = match crate::string_formating::get_assetid_version_tag(&tag) {
+            Ok(res) => res,
+            Err(e) => {
+                eprintln!("Skipping tag '{}': {}", tag, e);
+                continue;
+            }
+        };
         let parts: Vec<&str> = asset_id.rsplitn(2, "_").collect();
         
         if parts.len() < 2 {
-            return Err(format!("Invalid asset_id format: {}", asset_id));
+            eprintln!("Skipping asset_id with invalid format: {}", asset_id);
+            continue;
         }
         
-        let counter = parts[0]
-            .parse::<i32>()
-            .map_err(|e| format!("Failed to parse counter: {}", e))?;
+        let counter = match parts[0].parse::<i32>() {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Failed to parse counter from '{}': {}", parts[0], e);
+                continue;
+            }
+        };
         
         counters.insert(counter);
     } 

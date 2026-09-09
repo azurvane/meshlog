@@ -50,9 +50,9 @@ function App() {
   // Callback invoked when resetting the current project path (e.g. via Settings button). Clears the stored
   // path both in local React state and disk configuration, redirecting the user to the Setup onboarding screen.
   const handleResetPath = async () => {
+    await AppSettings.reset("rootFolderPath");
     const storedVal = await AppSettings.getDefault("rootFolderPath");
     setProjectPath(storedVal);
-    await AppSettings.reset("rootFolderPath");
   };
 
   const handleIsSetting = () => {

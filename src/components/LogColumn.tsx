@@ -66,7 +66,7 @@ export const LogColumn: React.FC<LogColumnProps> = ({
         <div className="column-scrollable-container">
           <div className="column-scroll-content-wrapper">
             <div className="column-body hide-scrollbar">
-              {files.map((file, idx) => {
+              {files.map((file) => {
                 const isSelected = selectedFileName === file;
                 const className = `file-row ${
                   isSelected ? "selected" : ""
@@ -74,7 +74,7 @@ export const LogColumn: React.FC<LogColumnProps> = ({
 
                 return (
                   <div
-                    key={idx}
+                    key={file}
                     className={className}
                     onClick={() => onSelectFile(file)}
                   >

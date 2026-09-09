@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   SlidersHorizontal,
   PanelRightOpen,
@@ -24,6 +24,23 @@ interface HeaderProps {
   SetActivePanelView: (Panel: PanelView) => void;
 }
 
+function useClickOutside(
+  ref: React.RefObject<HTMLElement | null>,
+  onOutside: (isOpen: boolean) => void
+) {
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onOutside(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, [ref, onOutside]);
+}
+
 export const Header: React.FC<HeaderProps> = ({
   onSetting,
   visibleFields,
@@ -41,25 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
   const viewMenuWrapperRef = useRef<HTMLDivElement>(null);
   const logoWrapperRef = useRef<HTMLDivElement>(null);
 
-  function useClickOutside(
-    ref: React.RefObject<HTMLElement | null>,
-    onOutside: (isOpen: boolean) => void
-  ) {
-    useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node)) {
-          onOutside(false);
-        }
-      };
+  const closeMenu = useCallback((val: boolean) => SetIsMenuOpen(val), []);
+  const closeSwitchView = useCallback((val: boolean) => SetIsSwitchViewOpen(val), []);
 
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }, [ref, onOutside]);
-  }
-
-  useClickOutside(viewMenuWrapperRef, SetIsMenuOpen);
-  useClickOutside(logoWrapperRef, SetIsSwitchViewOpen);
+  useClickOutside(viewMenuWrapperRef, closeMenu);
+  useClickOutside(logoWrapperRef, closeSwitchView);
 
   const activeViewLabel =
     VIEW_REGISTRY.find((v) => v.view === currentView)?.label || "Repository";

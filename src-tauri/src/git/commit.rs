@@ -41,8 +41,12 @@ pub fn stage_commit_tag(root_path: &str, relative_file_path: &str, tag: &str, su
     }
     
     // git commit
-    let commit_output = Command::new("git")
-        .args(["commit", "-m", summary, "-m", detail])
+    let mut commit_cmd = Command::new("git");
+    commit_cmd.arg("commit").arg("-m").arg(summary);
+    if !detail.trim().is_empty() {
+        commit_cmd.arg("-m").arg(detail);
+    }
+    let commit_output = commit_cmd
         .current_dir(root_path)
         .output()
         .map_err(|e| e.to_string())?;
